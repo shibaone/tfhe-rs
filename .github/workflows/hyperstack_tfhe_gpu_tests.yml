@@ -120,6 +120,7 @@ jobs:
         run: |
           echo "CUDA_PATH=$CUDA_PATH" >> "${GITHUB_ENV}"
           echo "$CUDA_PATH/bin" >> "${GITHUB_PATH}"
+          echo "PATH=$CUDA_PATH/bin:$PATH" >> "${GITHUB_ENV}"
           echo "LD_LIBRARY_PATH=$CUDA_PATH/lib:$LD_LIBRARY_PATH" >> "${GITHUB_ENV}"
           echo "CUDACXX=/usr/local/cuda-${{ matrix.cuda }}/bin/nvcc" >> "${GITHUB_ENV}"
 
@@ -134,9 +135,11 @@ jobs:
             echo "HOME=/home/ubuntu";
           } >> "${GITHUB_ENV}"
 
-      - name:
+      - name: Check cuda installation
         if: ${{ !cancelled() }}
-        run: nvidia-smi
+        run: |
+          nvidia-smi
+          nvcc -V
 
       - name: Run core crypto and internal CUDA backend tests
         run: |
@@ -163,9 +166,22 @@ jobs:
         run: |
           make test_high_level_api_gpu
 
+  nvidia-troubleshoot:
+    name: Hyperstack troubleshoot
+    needs: [ setup-instance, cuda-tests-linux ]
+    runs-on: ${{ needs.setup-instance.outputs.runner-name }}
+    if: ${{ always() && needs.cuda-tests-linux.result != 'skipped' }}
+    continue-on-error: true
+    steps:
+      - name: Troubleshoot
+        run: |
+          dmesg | grep -i nvidia
+          dmesg | grep -i error
+          nvidia-smi
+
   slack-notify:
     name: Slack Notification
-    needs: [ setup-instance, cuda-tests-linux ]
+    needs: [ setup-instance, cuda-tests-linux, nvidia-troubleshoot ]
     runs-on: ubuntu-latest
     if: ${{ always() && needs.cuda-tests-linux.result != 'skipped' }}
     continue-on-error: true
@@ -179,7 +195,7 @@ jobs:
   teardown-instance:
     name: Teardown instance (cuda-h100-tests)
     if: ${{ always() && needs.setup-instance.result != 'skipped' }}
-    needs: [ setup-instance, cuda-tests-linux ]
+    needs: [ setup-instance, cuda-tests-linux, nvidia-troubleshoot ]
     runs-on: ubuntu-latest
     steps:
       - name: Stop instance
