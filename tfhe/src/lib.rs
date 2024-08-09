@@ -125,7 +125,7 @@ pub use high_level_api::*;
 /// cbindgen:ignore
 pub mod keycache;
 
-pub mod safe_deserialization;
+pub mod safe_serialization;
 
 pub mod conformance;
 
