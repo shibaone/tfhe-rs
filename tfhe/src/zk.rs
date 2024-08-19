@@ -4,7 +4,7 @@ use rand_core::RngCore;
 use std::cmp::Ordering;
 use std::collections::Bound;
 use std::fmt::Debug;
-use tfhe_zk_pok::proofs::pke::crs_gen;
+use tfhe_zk_pok::proofs::pke_v2::crs_gen;
 
 pub use tfhe_zk_pok::proofs::ComputeLoad as ZkComputeLoad;
 pub use tfhe_zk_pok::{CanonicalDeserialize, CanonicalSerialize, Compress, Validate};
