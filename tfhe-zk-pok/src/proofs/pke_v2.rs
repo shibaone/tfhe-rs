@@ -2,19 +2,31 @@
 #![allow(non_snake_case)]
 
 use super::*;
+use crate::backward_compatibility::ProofVersions;
 use crate::four_squares::*;
+use crate::serialization::SerializablePublicParams;
 use core::marker::PhantomData;
 use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
+use tfhe_versionable::{Unversionize, UnversionizeError, Versionize, VersionizeVec};
 
 fn bit_iter(x: u64, nbits: u32) -> impl Iterator<Item = bool> {
     (0..nbits).map(move |idx| ((x >> idx) & 1) != 0)
 }
 
 /// The CRS of the zk scheme
-#[derive(Clone, Debug, CanonicalSerialize, CanonicalDeserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, CanonicalSerialize, CanonicalDeserialize)]
+#[serde(
+    try_from = "SerializablePublicParams<G>",
+    into = "SerializablePublicParams<G>",
+    bound(
+        deserialize = "G: Curve, G::G1: serde::Deserialize<'de>, G::G2: serde::Deserialize<'de>",
+        serialize = "G: Curve + Clone, G::G1: serde::Serialize, G::G2: serde::Serialize"
+    )
+)]
 pub struct PublicParams<G: Curve> {
-    g_lists: GroupElements<G>,
-    D: usize,
+    pub(crate) g_lists: GroupElements<G>,
+    pub(crate) D: usize,
     pub n: usize,
     pub d: usize,
     pub k: usize,
@@ -24,16 +36,88 @@ pub struct PublicParams<G: Curve> {
     pub m_bound: usize,
     pub q: u64,
     pub t: u64,
-    hash: [u8; HASH_METADATA_LEN_BYTES],
-    hash_R: [u8; HASH_METADATA_LEN_BYTES],
-    hash_t: [u8; HASH_METADATA_LEN_BYTES],
-    hash_w: [u8; HASH_METADATA_LEN_BYTES],
-    hash_agg: [u8; HASH_METADATA_LEN_BYTES],
-    hash_lmap: [u8; HASH_METADATA_LEN_BYTES],
-    hash_phi: [u8; HASH_METADATA_LEN_BYTES],
-    hash_xi: [u8; HASH_METADATA_LEN_BYTES],
-    hash_z: [u8; HASH_METADATA_LEN_BYTES],
-    hash_chi: [u8; HASH_METADATA_LEN_BYTES],
+    pub(crate) hash: [u8; HASH_METADATA_LEN_BYTES],
+    pub(crate) hash_R: [u8; HASH_METADATA_LEN_BYTES],
+    pub(crate) hash_t: [u8; HASH_METADATA_LEN_BYTES],
+    pub(crate) hash_w: [u8; HASH_METADATA_LEN_BYTES],
+    pub(crate) hash_agg: [u8; HASH_METADATA_LEN_BYTES],
+    pub(crate) hash_lmap: [u8; HASH_METADATA_LEN_BYTES],
+    pub(crate) hash_phi: [u8; HASH_METADATA_LEN_BYTES],
+    pub(crate) hash_xi: [u8; HASH_METADATA_LEN_BYTES],
+    pub(crate) hash_z: [u8; HASH_METADATA_LEN_BYTES],
+    pub(crate) hash_chi: [u8; HASH_METADATA_LEN_BYTES],
+}
+
+// Manual impl of Versionize because the proc macro has trouble handling conversion from/into types
+// with generics
+impl<
+        G: Curve
+            + Clone
+            + Serialize
+            + for<'de> Deserialize<'de>
+            + Unversionize
+            + VersionizeVec
+            + VersionizeSlice
+            + UnversionizeVec
+            + Versionize,
+    > Versionize for PublicParams<G>
+where
+    Affine<G::Zp, G::G1>: VersionizeSlice + UnversionizeVec,
+    Affine<G::Zp, G::G2>: VersionizeSlice + UnversionizeVec,
+{
+    type Versioned<'vers> = <SerializablePublicParams<G> as VersionizeOwned>::VersionedOwned
+    where
+        Self: 'vers;
+
+    fn versionize(&self) -> Self::Versioned<'_> {
+        SerializablePublicParams::from(self.clone()).versionize_owned()
+    }
+}
+
+impl<
+        G: Curve
+            + Clone
+            + Serialize
+            + for<'de> Deserialize<'de>
+            + Unversionize
+            + VersionizeVec
+            + VersionizeSlice
+            + UnversionizeVec
+            + Versionize,
+    > VersionizeOwned for PublicParams<G>
+where
+    Affine<G::Zp, G::G1>: VersionizeSlice + UnversionizeVec,
+    Affine<G::Zp, G::G2>: VersionizeSlice + UnversionizeVec,
+{
+    type VersionedOwned = <SerializablePublicParams<G> as VersionizeOwned>::VersionedOwned;
+
+    fn versionize_owned(self) -> Self::VersionedOwned {
+        SerializablePublicParams::from(self.clone()).versionize_owned()
+    }
+}
+
+impl<
+        G: Curve
+            + Clone
+            + Serialize
+            + for<'de> Deserialize<'de>
+            + Unversionize
+            + VersionizeVec
+            + VersionizeSlice
+            + UnversionizeVec
+            + Versionize,
+    > Unversionize for PublicParams<G>
+where
+    Affine<G::Zp, G::G1>: VersionizeSlice + UnversionizeVec,
+    Affine<G::Zp, G::G2>: VersionizeSlice + UnversionizeVec,
+{
+    fn unversionize(
+        versioned: Self::VersionedOwned,
+    ) -> Result<Self, tfhe_versionable::UnversionizeError> {
+        SerializablePublicParams::unversionize(versioned)?
+            .try_into()
+            .map_err(|e| UnversionizeError::conversion("SerializablePublicParams", e))
+    }
 }
 
 impl<G: Curve> PublicParams<G> {
@@ -91,11 +175,12 @@ impl<G: Curve> PublicParams<G> {
 
 /// This represents a proof that the given ciphertext is a valid encryptions of the input messages
 /// with the provided public key.
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, Versionize)]
 #[serde(bound(
     deserialize = "G: Curve, G::G1: serde::Deserialize<'de>, G::G2: serde::Deserialize<'de>",
     serialize = "G: Curve, G::G1: serde::Serialize, G::G2: serde::Serialize"
 ))]
+#[versionize(ProofVersions)]
 pub struct Proof<G: Curve> {
     C_hat_e: G::G2,
     C_e: G::G1,

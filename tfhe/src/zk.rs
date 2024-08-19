@@ -9,8 +9,8 @@ use tfhe_zk_pok::proofs::pke_v2::crs_gen;
 pub use tfhe_zk_pok::proofs::ComputeLoad as ZkComputeLoad;
 pub use tfhe_zk_pok::{CanonicalDeserialize, CanonicalSerialize, Compress, Validate};
 type Curve = tfhe_zk_pok::curve_api::Bls12_446;
-pub type CompactPkeProof = tfhe_zk_pok::proofs::pke::Proof<Curve>;
-pub type CompactPkePublicParams = tfhe_zk_pok::proofs::pke::PublicParams<Curve>;
+pub type CompactPkeProof = tfhe_zk_pok::proofs::pke_v2::Proof<Curve>;
+pub type CompactPkePublicParams = tfhe_zk_pok::proofs::pke_v2::PublicParams<Curve>;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub enum ZkVerificationOutCome {

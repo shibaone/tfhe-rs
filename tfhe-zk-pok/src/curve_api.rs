@@ -7,6 +7,7 @@ use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use core::fmt;
 use core::ops::{Add, AddAssign, Div, Mul, Neg, Sub, SubAssign};
 use serde::{Deserialize, Serialize};
+use tfhe_versionable::NotVersioned;
 
 use crate::serialization::{SerializableAffine, SerializableFp, SerializableFp12, SerializableFp2};
 
@@ -412,9 +413,11 @@ impl PairingGroupOps<bls12_446::Zp, bls12_446::G1, bls12_446::G2> for bls12_446:
     }
 }
 
-#[derive(Debug, Copy, Clone, serde::Serialize, serde::Deserialize)]
+// These are just ZSTs that are not actually produced and are only used for their
+// associated types. So it's ok to derive "NotVersioned" for them.
+#[derive(Debug, Copy, Clone, serde::Serialize, serde::Deserialize, NotVersioned)]
 pub struct Bls12_381;
-#[derive(Debug, Copy, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Copy, Clone, serde::Serialize, serde::Deserialize, NotVersioned)]
 pub struct Bls12_446;
 
 impl Curve for Bls12_381 {

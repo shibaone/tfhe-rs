@@ -1,11 +1,22 @@
+#![allow(non_snake_case)]
+
 use std::error::Error;
 use std::fmt::Display;
 use std::marker::PhantomData;
 
+use crate::backward_compatibility::{
+    SerializableAffineVersions, SerializableCubicExtFieldVersions, SerializableFpVersions,
+    SerializablePublicParamsVersions, SerializableQuadExtFieldVersions,
+};
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ec::AffineRepr;
 use ark_ff::{BigInt, Field, Fp, Fp2, Fp6, Fp6Config, FpConfig, QuadExtConfig, QuadExtField};
 use serde::{Deserialize, Serialize};
+use tfhe_versionable::Versionize;
+
+use crate::curve_api::Curve;
+use crate::proofs::pke_v2::PublicParams;
+use crate::proofs::GroupElements;
 
 /// Error returned when a conversion from a vec to a fixed size array failed because the vec size is
 /// incorrect
@@ -40,7 +51,8 @@ fn try_vec_to_array<T, const N: usize>(vec: Vec<T>) -> Result<[T; N], InvalidArr
 
 /// Serialization equivalent of the [`Fp`] struct, where the bigint is split into
 /// multiple u64.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Versionize)]
+#[versionize(SerializableFpVersions)]
 pub struct SerializableFp {
     val: Vec<u64>, // Use a Vec<u64> since serde does not support fixed size arrays with a generic
 }
@@ -60,6 +72,24 @@ impl<P: FpConfig<N>, const N: usize> TryFrom<SerializableFp> for Fp<P, N> {
         Ok(Fp(BigInt(try_vec_to_array(value.val)?), PhantomData))
     }
 }
+
+#[derive(Debug)]
+pub struct InvalidSerializedFpError {
+    expected_len: usize,
+    found_len: usize,
+}
+
+impl Display for InvalidSerializedFpError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Invalid serialized FP: found array of size {}, expected {}",
+            self.found_len, self.expected_len
+        )
+    }
+}
+
+impl Error for InvalidSerializedFpError {}
 
 #[derive(Debug)]
 pub enum InvalidSerializedAffineError {
@@ -100,8 +130,9 @@ impl From<InvalidArraySizeError> for InvalidSerializedAffineError {
 
 /// Serialization equivalent to the [`Affine`], which support an optional compression mode
 /// where only the `x` coordinate is stored, and the `y` is computed on load.
-#[derive(Serialize, Deserialize)]
-pub(crate) enum SerializableAffine<F> {
+#[derive(Serialize, Deserialize, Versionize)]
+#[versionize(SerializableAffineVersions)]
+pub enum SerializableAffine<F> {
     Infinity,
     Compressed { x: F, take_largest_y: bool },
     Uncompressed { x: F, y: F },
@@ -157,13 +188,17 @@ where
     }
 }
 
-#[derive(Serialize, Deserialize)]
-pub(crate) struct SerializableQuadExtField<F> {
+pub(crate) type SerializableG1Affine = SerializableAffine<SerializableFp>;
+
+#[derive(Serialize, Deserialize, Versionize)]
+#[versionize(SerializableQuadExtFieldVersions)]
+pub struct SerializableQuadExtField<F> {
     c0: F,
     c1: F,
 }
 
 pub(crate) type SerializableFp2 = SerializableQuadExtField<SerializableFp>;
+pub type SerializableG2Affine = SerializableAffine<SerializableFp2>;
 
 impl<F, P: QuadExtConfig> From<QuadExtField<P>> for SerializableQuadExtField<F>
 where
@@ -191,14 +226,15 @@ where
     }
 }
 
-#[derive(Serialize, Deserialize)]
-pub(crate) struct SerializableCubicExtField<F> {
+#[derive(Serialize, Deserialize, Versionize)]
+#[versionize(SerializableCubicExtFieldVersions)]
+pub struct SerializableCubicExtField<F> {
     c0: F,
     c1: F,
     c2: F,
 }
 
-type SerializableFp6 = SerializableCubicExtField<SerializableFp2>;
+pub(crate) type SerializableFp6 = SerializableCubicExtField<SerializableFp2>;
 
 impl<F, P6: Fp6Config> From<Fp6<P6>> for SerializableCubicExtField<F>
 where
@@ -229,3 +265,138 @@ where
 }
 
 pub(crate) type SerializableFp12 = SerializableQuadExtField<SerializableFp6>;
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize, Versionize)]
+#[serde(bound(
+    deserialize = "G: Curve, G::G1: serde::Deserialize<'de>, G::G2: serde::Deserialize<'de>",
+    serialize = "G: Curve, G::G1: serde::Serialize, G::G2: serde::Serialize"
+))]
+#[versionize(SerializablePublicParamsVersions)]
+pub struct SerializablePublicParams<G: Curve> {
+    g_lists: GroupElements<G>,
+    D: usize,
+    pub n: usize,
+    pub d: usize,
+    pub k: usize,
+    pub B: u64,
+    pub B_r: u64,
+    pub B_bound: u64,
+    pub m_bound: usize,
+    pub q: u64,
+    pub t: u64,
+    // We use Vec<u8> since serde does not support fixed size arrays of 256 elements
+    hash: Vec<u8>,
+    hash_R: Vec<u8>,
+    hash_t: Vec<u8>,
+    hash_w: Vec<u8>,
+    hash_agg: Vec<u8>,
+    hash_lmap: Vec<u8>,
+    hash_phi: Vec<u8>,
+    hash_xi: Vec<u8>,
+    hash_z: Vec<u8>,
+    hash_chi: Vec<u8>,
+}
+
+impl<G: Curve> From<PublicParams<G>> for SerializablePublicParams<G> {
+    fn from(value: PublicParams<G>) -> Self {
+        let PublicParams {
+            g_lists,
+            D,
+            n,
+            d,
+            k,
+            B,
+            B_r,
+            B_bound,
+            m_bound,
+            q,
+            t,
+            hash,
+            hash_R,
+            hash_t,
+            hash_w,
+            hash_agg,
+            hash_lmap,
+            hash_phi,
+            hash_xi,
+            hash_z,
+            hash_chi,
+        } = value;
+        Self {
+            g_lists,
+            D,
+            n,
+            d,
+            k,
+            B,
+            B_r,
+            B_bound,
+            m_bound,
+            q,
+            t,
+            hash: hash.to_vec(),
+            hash_R: hash_R.to_vec(),
+            hash_t: hash_t.to_vec(),
+            hash_w: hash_w.to_vec(),
+            hash_agg: hash_agg.to_vec(),
+            hash_lmap: hash_lmap.to_vec(),
+            hash_phi: hash_phi.to_vec(),
+            hash_xi: hash_xi.to_vec(),
+            hash_z: hash_z.to_vec(),
+            hash_chi: hash_chi.to_vec(),
+        }
+    }
+}
+
+impl<G: Curve> TryFrom<SerializablePublicParams<G>> for PublicParams<G> {
+    type Error = InvalidArraySizeError;
+
+    fn try_from(value: SerializablePublicParams<G>) -> Result<Self, Self::Error> {
+        let SerializablePublicParams {
+            g_lists,
+            D,
+            n,
+            d,
+            k,
+            B,
+            B_r,
+            B_bound,
+            m_bound,
+            q,
+            t,
+            hash,
+            hash_R,
+            hash_t,
+            hash_w,
+            hash_agg,
+            hash_lmap,
+            hash_phi,
+            hash_xi,
+            hash_z,
+            hash_chi,
+        } = value;
+        Ok(Self {
+            g_lists,
+            D,
+            n,
+            d,
+            k,
+            B,
+            B_r,
+            B_bound,
+            m_bound,
+            q,
+            t,
+            hash: try_vec_to_array(hash)?,
+            hash_R: try_vec_to_array(hash_R)?,
+            hash_t: try_vec_to_array(hash_t)?,
+            hash_w: try_vec_to_array(hash_w)?,
+            hash_agg: try_vec_to_array(hash_agg)?,
+            hash_lmap: try_vec_to_array(hash_lmap)?,
+            hash_phi: try_vec_to_array(hash_phi)?,
+            hash_xi: try_vec_to_array(hash_xi)?,
+            hash_z: try_vec_to_array(hash_z)?,
+            hash_chi: try_vec_to_array(hash_chi)?,
+        })
+    }
+}
