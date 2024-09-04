@@ -77,7 +77,7 @@ keyswitch(Torus *lwe_array_out, const Torus *__restrict__ lwe_output_indexes,
 
       for (int j = 0; j < level_count; j++) {
         auto ksk_block =
-            get_ith_block(ksk, i, j, lwe_dimension_out, level_count);
+            get_ith_block(ksk, i, level_count - j - 1, lwe_dimension_out, level_count);
         Torus decomposed = decompose_one<Torus>(state, mask_mod_b, base_log);
         local_lwe_out -= (Torus)ksk_block[tid] * decomposed;
       }

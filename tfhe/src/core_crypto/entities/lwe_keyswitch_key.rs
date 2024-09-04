@@ -76,7 +76,7 @@ use crate::core_crypto::entities::*;
 ///    \mathsf{decompProduct}\left( a\_i , \overline{\mathsf{ct}\_i} \right)$
 /// 3. output $\mathsf{ct}\_{\mathsf{out}}$
 #[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize, Versionize)]
-#[versionize(LweKeyswitchKeyVersions)]
+#[versionize(LweKeyswitchKeyVersions, bound = "C: ContainerMut")]
 pub struct LweKeyswitchKey<C: Container>
 where
     C::Element: UnsignedInteger,
@@ -301,6 +301,18 @@ impl<Scalar: UnsignedInteger, C: ContainerMut<Element = Scalar>> LweKeyswitchKey
         let output_lwe_size = self.output_lwe_size();
         let ciphertext_modulus = self.ciphertext_modulus();
         LweCiphertextListMutView::from_container(self.as_mut(), output_lwe_size, ciphertext_modulus)
+    }
+}
+
+// This is used for backwards compatibility of older ksk which have a reversed level order
+pub(crate) fn lwe_keyswitch_key_data_compatibility_reverse_levels<
+    Scalar: UnsignedInteger,
+    C: ContainerMut<Element = Scalar>,
+>(
+    ksk: &mut LweKeyswitchKey<C>,
+) {
+    for mut ksk_block in ksk.iter_mut() {
+        ksk_block.reverse();
     }
 }
 

@@ -22,6 +22,9 @@ where
     output_lwe_size: LweSize,
     compression_seed: CompressionSeed,
     ciphertext_modulus: CiphertextModulus<C::Element>,
+    // This is for backward compatibility, older keys had a reverse storage for levels, we cannot
+    // fix this before decompressing the key so we need the extra info here
+    needs_level_inversion_on_decompression: bool,
 }
 
 impl<T: UnsignedInteger, C: Container<Element = T>> AsRef<[T]> for SeededLweKeyswitchKey<C> {
@@ -139,6 +142,26 @@ impl<Scalar: UnsignedInteger, C: Container<Element = Scalar>> SeededLweKeyswitch
         compression_seed: CompressionSeed,
         ciphertext_modulus: CiphertextModulus<C::Element>,
     ) -> Self {
+        Self::from_container_impl(
+            container,
+            decomp_base_log,
+            decomp_level_count,
+            output_lwe_size,
+            compression_seed,
+            ciphertext_modulus,
+            false,
+        )
+    }
+
+    pub(crate) fn from_container_impl(
+        container: C,
+        decomp_base_log: DecompositionBaseLog,
+        decomp_level_count: DecompositionLevelCount,
+        output_lwe_size: LweSize,
+        compression_seed: CompressionSeed,
+        ciphertext_modulus: CiphertextModulus<C::Element>,
+        needs_level_inversion_on_decompression: bool,
+    ) -> Self {
         assert!(
             ciphertext_modulus.is_compatible_with_native_modulus(),
             "Seeded entities are not yet compatible with non power of 2 moduli."
@@ -164,6 +187,8 @@ impl<Scalar: UnsignedInteger, C: Container<Element = Scalar>> SeededLweKeyswitch
             output_lwe_size,
             compression_seed,
             ciphertext_modulus,
+            // Keys from older versions would have true here
+            needs_level_inversion_on_decompression,
         }
     }
 
@@ -290,6 +315,10 @@ impl<Scalar: UnsignedInteger, C: Container<Element = Scalar>> SeededLweKeyswitch
 
     pub fn ciphertext_modulus(&self) -> CiphertextModulus<C::Element> {
         self.ciphertext_modulus
+    }
+
+    pub(crate) fn needs_level_inversion_on_decompression(&self) -> bool {
+        self.needs_level_inversion_on_decompression
     }
 }
 

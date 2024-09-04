@@ -27,6 +27,11 @@ pub fn decompress_seeded_lwe_keyswitch_key_with_existing_generator<
         &input_ksk.as_seeded_lwe_ciphertext_list(),
         generator,
     );
+
+    // This is for backward compatibility
+    if input_ksk.needs_level_inversion_on_decompression() {
+        lwe_keyswitch_key_data_compatibility_reverse_levels(output_ksk);
+    }
 }
 
 /// Decompress a [`SeededLweKeyswitchKey`], without consuming it, into a standard
@@ -69,6 +74,11 @@ pub fn par_decompress_seeded_lwe_keyswitch_key_with_existing_generator<
         &input_ksk.as_seeded_lwe_ciphertext_list(),
         generator,
     );
+
+    // This is for backward compatibility
+    if input_ksk.needs_level_inversion_on_decompression() {
+        lwe_keyswitch_key_data_compatibility_reverse_levels(output_ksk);
+    }
 }
 
 /// Parallel variant of [`decompress_seeded_lwe_keyswitch_key`].
