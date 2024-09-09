@@ -6,7 +6,7 @@ use crate::core_crypto::commons::math::random::{Deserialize, Serialize};
 use crate::high_level_api::integers::{FheIntId, FheUintId};
 use crate::integer::ciphertext::{Compressible, DataKind, Expandable};
 use crate::named::Named;
-use crate::prelude::Tagged;
+use crate::prelude::{CiphertextList, Tagged};
 use crate::shortint::Ciphertext;
 use crate::{FheBool, FheInt, FheUint, Tag};
 
@@ -97,16 +97,16 @@ impl Tagged for CompressedCiphertextList {
     }
 }
 
-impl CompressedCiphertextList {
-    pub fn len(&self) -> usize {
+impl CiphertextList for CompressedCiphertextList {
+    fn len(&self) -> usize {
         self.inner.len()
     }
 
-    pub fn is_empty(&self) -> bool {
+    fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
-    pub fn get_kind_of(&self, index: usize) -> Option<crate::FheTypes> {
+    fn get_kind_of(&self, index: usize) -> Option<crate::FheTypes> {
         Some(match self.inner.get_kind_of(index)? {
             DataKind::Unsigned(n) => {
                 let num_bits_per_block = self.inner.packed_list.message_modulus.0.ilog2() as usize;
@@ -152,7 +152,7 @@ impl CompressedCiphertextList {
         })
     }
 
-    pub fn get<T>(&self, index: usize) -> crate::Result<Option<T>>
+    fn get<T>(&self, index: usize) -> crate::Result<Option<T>>
     where
         T: Expandable + Tagged,
     {

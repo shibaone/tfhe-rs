@@ -2,6 +2,7 @@ use std::ops::RangeBounds;
 
 use crate::error::InvalidRangeError;
 use crate::high_level_api::ClientKey;
+use crate::integer::ciphertext::Expandable;
 use crate::{FheBool, Tag};
 
 /// Trait used to have a generic way of creating a value of a FHE type
@@ -198,4 +199,13 @@ pub trait Tagged {
     fn tag(&self) -> &Tag;
 
     fn tag_mut(&mut self) -> &mut Tag;
+}
+
+pub trait CiphertextList {
+    fn len(&self) -> usize;
+    fn is_empty(&self) -> bool;
+    fn get_kind_of(&self, index: usize) -> Option<crate::FheTypes>;
+    fn get<T>(&self, index: usize) -> crate::Result<Option<T>>
+    where
+        T: Expandable + Tagged;
 }

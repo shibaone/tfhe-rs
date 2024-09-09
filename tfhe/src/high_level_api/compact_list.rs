@@ -16,6 +16,7 @@ use crate::integer::parameters::{
     IntegerCompactCiphertextListUnpackingMode,
 };
 use crate::named::Named;
+use crate::prelude::CiphertextList;
 use crate::shortint::MessageModulus;
 #[cfg(feature = "zk-pok")]
 pub use zk::ProvenCompactCiphertextList;
@@ -366,27 +367,27 @@ pub struct CompactCiphertextListExpander {
     tag: Tag,
 }
 
-impl CompactCiphertextListExpander {
-    pub fn len(&self) -> usize {
+impl CiphertextList for CompactCiphertextListExpander {
+    fn len(&self) -> usize {
         self.inner.len()
     }
 
-    pub fn is_empty(&self) -> bool {
+    fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
-    pub fn get_kind_of(&self, index: usize) -> Option<crate::FheTypes> {
+    fn get_kind_of(&self, index: usize) -> Option<crate::FheTypes> {
         self.inner.get_kind_of(index).and_then(|data_kind| {
             crate::FheTypes::from_data_kind(data_kind, self.inner.message_modulus())
         })
     }
 
-    pub fn get<T>(&self, index: usize) -> Option<crate::Result<T>>
+    fn get<T>(&self, index: usize) -> crate::Result<Option<T>>
     where
         T: Expandable + Tagged,
     {
         let mut expanded = self.inner.get::<T>(index);
-        if let Some(Ok(inner)) = &mut expanded {
+        if let Ok(Some(inner)) = &mut expanded {
             inner.tag_mut().set_data(self.tag.data());
         }
         expanded
@@ -540,15 +541,15 @@ mod tests {
             let e: u8 = e.decrypt(&ck);
             assert_eq!(e, 3);
 
-            assert!(expander.get::<FheBool>(5).is_none());
+            assert!(expander.get::<FheBool>(5).unwrap().is_none());
         }
 
         {
             // Incorrect type
-            assert!(expander.get::<FheInt64>(0).unwrap().is_err());
+            assert!(expander.get::<FheInt64>(0).is_err());
 
             // Correct type but wrong number of bits
-            assert!(expander.get::<FheUint16>(0).unwrap().is_err());
+            assert!(expander.get::<FheUint16>(0).is_err());
         }
     }
 
@@ -603,15 +604,15 @@ mod tests {
             let d: u8 = d.decrypt(&ck);
             assert_eq!(d, 3);
 
-            assert!(expander.get::<FheBool>(4).is_none());
+            assert!(expander.get::<FheBool>(4).unwrap().is_none());
         }
 
         {
             // Incorrect type
-            assert!(expander.get::<FheInt64>(0).unwrap().is_err());
+            assert!(expander.get::<FheInt64>(0).is_err());
 
             // Correct type but wrong number of bits
-            assert!(expander.get::<FheUint16>(0).unwrap().is_err());
+            assert!(expander.get::<FheUint16>(0).is_err());
         }
 
         let unverified_expander = compact_list.expand_without_verification().unwrap();
@@ -631,7 +632,7 @@ mod tests {
             let d: u8 = d.decrypt(&ck);
             assert_eq!(d, 3);
 
-            assert!(unverified_expander.get::<FheBool>(4).is_none());
+            assert!(unverified_expander.get::<FheBool>(4).unwrap().is_none());
         }
     }
 
@@ -692,15 +693,15 @@ mod tests {
             let d: u8 = d.decrypt(&ck);
             assert_eq!(d, 3);
 
-            assert!(expander.get::<FheBool>(4).is_none());
+            assert!(expander.get::<FheBool>(4).unwrap().is_none());
         }
 
         {
             // Incorrect type
-            assert!(expander.get::<FheInt64>(0).unwrap().is_err());
+            assert!(expander.get::<FheInt64>(0).is_err());
 
             // Correct type but wrong number of bits
-            assert!(expander.get::<FheUint16>(0).unwrap().is_err());
+            assert!(expander.get::<FheUint16>(0).is_err());
         }
 
         let unverified_expander = compact_list.expand_without_verification().unwrap();
@@ -720,7 +721,7 @@ mod tests {
             let d: u8 = d.decrypt(&ck);
             assert_eq!(d, 3);
 
-            assert!(unverified_expander.get::<FheBool>(4).is_none());
+            assert!(unverified_expander.get::<FheBool>(4).unwrap().is_none());
         }
     }
 }
