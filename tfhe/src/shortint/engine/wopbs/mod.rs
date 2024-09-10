@@ -141,6 +141,7 @@ impl ShortintEngine {
 
         let wopbs_server_key = ServerKey {
             key_switching_key: ksk_wopbs_large_to_wopbs_small,
+            ks_32_bits: None,
             bootstrapping_key: ShortintBootstrappingKey::Classic(small_bsk),
             message_modulus: parameters.message_modulus,
             carry_modulus: parameters.carry_modulus,
@@ -160,6 +161,7 @@ impl ShortintEngine {
 
         let pbs_server_key = ServerKey {
             key_switching_key: ksk_wopbs_large_to_pbs_small,
+            ks_32_bits: None,
             bootstrapping_key: sks.bootstrapping_key.clone(),
             message_modulus: cks.parameters.message_modulus(),
             carry_modulus: cks.parameters.carry_modulus(),

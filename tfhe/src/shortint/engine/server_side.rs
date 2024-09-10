@@ -71,19 +71,64 @@ impl ShortintEngine {
         let bootstrapping_key_base = self.new_bootstrapping_key(pbs_params_base, in_key, out_key);
 
         // Creation of the key switching key
-        let key_switching_key = allocate_and_generate_new_lwe_keyswitch_key(
-            &cks.large_lwe_secret_key(),
-            &cks.small_lwe_secret_key(),
+        // let key_switching_key = allocate_and_generate_new_lwe_keyswitch_key(
+        //     &cks.large_lwe_secret_key(),
+        //     &cks.small_lwe_secret_key(),
+        //     cks.parameters.ks_base_log(),
+        //     cks.parameters.ks_level(),
+        //     cks.parameters.lwe_noise_distribution(),
+        //     cks.parameters.ciphertext_modulus(),
+        //     &mut self.encryption_generator,
+        // );
+
+        let large_key_u32 = LweSecretKey::from_container(
+            cks.large_lwe_secret_key()
+                .as_ref()
+                .iter()
+                .copied()
+                .map(|x| x as u32)
+                .collect::<Vec<_>>(),
+        );
+
+        let small_key_u32 = LweSecretKey::from_container(
+            cks.small_lwe_secret_key()
+                .as_ref()
+                .iter()
+                .copied()
+                .map(|x| x as u32)
+                .collect::<Vec<_>>(),
+        );
+
+        let dist_u32 = match cks.parameters.lwe_noise_distribution() {
+            DynamicDistribution::Gaussian(g) => {
+                DynamicDistribution::new_gaussian_from_std_dev(g.standard_dev())
+            }
+            DynamicDistribution::TUniform(val) => {
+                DynamicDistribution::new_t_uniform(val.bound_log2())
+            }
+        };
+
+        let ks_32_bits = Some(allocate_and_generate_new_lwe_keyswitch_key(
+            &large_key_u32,
+            &small_key_u32,
             cks.parameters.ks_base_log(),
             cks.parameters.ks_level(),
-            cks.parameters.lwe_noise_distribution(),
-            cks.parameters.ciphertext_modulus(),
+            dist_u32,
+            crate::core_crypto::commons::ciphertext_modulus::CiphertextModulus::<u32>::new_native(),
             &mut self.encryption_generator,
-        );
+        ));
 
         // Pack the keys in the server key set:
         ServerKey {
-            key_switching_key,
+            key_switching_key: LweKeyswitchKeyOwned::new(
+                0u64,
+                DecompositionBaseLog(1),
+                DecompositionLevelCount(1),
+                LweDimension(1),
+                LweDimension(1),
+                cks.parameters.ciphertext_modulus(),
+            ),
+            ks_32_bits,
             bootstrapping_key: bootstrapping_key_base,
             message_modulus: cks.parameters.message_modulus(),
             carry_modulus: cks.parameters.carry_modulus(),

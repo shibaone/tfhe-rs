@@ -19,13 +19,13 @@ mod shift;
 mod sub;
 
 pub mod compressed;
-use ::tfhe_versionable::{Unversionize, UnversionizeError, Versionize, VersionizeOwned};
 use aligned_vec::ABox;
 pub use bivariate_pbs::{
     BivariateLookupTableMutView, BivariateLookupTableOwned, BivariateLookupTableView,
 };
 pub use compressed::{CompressedServerKey, ShortintCompressedBootstrappingKey};
 pub(crate) use scalar_mul::unchecked_scalar_mul_assign;
+use tfhe_versionable::{Unversionize, UnversionizeError, Versionize, VersionizeOwned};
 
 #[cfg(test)]
 pub(crate) mod tests;
@@ -520,6 +520,7 @@ impl ShortintBootstrappingKey {
 #[versionize(ServerKeyVersions)]
 pub struct ServerKey {
     pub key_switching_key: LweKeyswitchKeyOwned<u64>,
+    pub ks_32_bits: Option<LweKeyswitchKeyOwned<u32>>,
     pub bootstrapping_key: ShortintBootstrappingKey,
     // Size of the message buffer
     pub message_modulus: MessageModulus,
@@ -639,6 +640,7 @@ impl ServerKey {
     ) {
         let Self {
             key_switching_key,
+            ks_32_bits: _,
             bootstrapping_key,
             message_modulus,
             carry_modulus,
@@ -712,6 +714,7 @@ impl ServerKey {
 
         Self {
             key_switching_key,
+            ks_32_bits: None,
             bootstrapping_key,
             message_modulus,
             carry_modulus,
@@ -931,11 +934,14 @@ impl ServerKey {
         }
 
         ShortintEngine::with_thread_local_mut(|engine| {
-            let (mut ciphertext_buffers, buffers) = engine.get_buffers(self);
+            let (mut ciphertext_buffers, buffers) = engine.get_buffers_32(self);
+            let Some(ksk) = self.ks_32_bits.as_ref() else {
+                unreachable!()
+            };
             match self.pbs_order {
                 PBSOrder::KeyswitchBootstrap => {
-                    keyswitch_lwe_ciphertext(
-                        &self.key_switching_key,
+                    keyswitch_lwe_ciphertext_with_scalar_change(
+                        ksk,
                         &ct.ct,
                         &mut ciphertext_buffers.buffer_lwe_after_ks,
                     );
@@ -949,19 +955,20 @@ impl ServerKey {
                     );
                 }
                 PBSOrder::BootstrapKeyswitch => {
-                    apply_programmable_bootstrap(
-                        &self.bootstrapping_key,
-                        &ct.ct,
-                        &mut ciphertext_buffers.buffer_lwe_after_pbs,
-                        &acc.acc,
-                        buffers,
-                    );
+                    // apply_programmable_bootstrap(
+                    //     &self.bootstrapping_key,
+                    //     &ct.ct,
+                    //     &mut ciphertext_buffers.buffer_lwe_after_pbs,
+                    //     &acc.acc,
+                    //     buffers,
+                    // );
 
-                    keyswitch_lwe_ciphertext(
-                        &self.key_switching_key,
-                        &ciphertext_buffers.buffer_lwe_after_pbs,
-                        &mut ct.ct,
-                    );
+                    // keyswitch_lwe_ciphertext(
+                    //     &self.key_switching_key,
+                    //     &ciphertext_buffers.buffer_lwe_after_pbs,
+                    //     &mut ct.ct,
+                    // );
+                    todo!();
                 }
             }
         });
@@ -1431,19 +1438,19 @@ impl ServerKey {
         let mut acc = lut.acc.clone();
 
         ShortintEngine::with_thread_local_mut(|engine| {
-            // Compute the programmable bootstrapping with fixed test polynomial
-            let (mut ciphertext_buffers, buffers) = engine.get_buffers(self);
-
-            // Compute a key switch
-            keyswitch_lwe_ciphertext(
-                &self.key_switching_key,
+            let (mut ciphertext_buffers, buffers) = engine.get_buffers_32(self);
+            let Some(ksk) = self.ks_32_bits.as_ref() else {
+                unreachable!()
+            };
+            keyswitch_lwe_ciphertext_with_scalar_change(
+                ksk,
                 &ct.ct,
                 &mut ciphertext_buffers.buffer_lwe_after_ks,
             );
 
             apply_blind_rotate(
                 &self.bootstrapping_key,
-                &ciphertext_buffers.buffer_lwe_after_ks.as_view(),
+                &ciphertext_buffers.buffer_lwe_after_ks,
                 &mut acc,
                 buffers,
             );
@@ -1601,15 +1608,15 @@ impl ServerKey {
     }
 }
 
-pub(crate) fn apply_blind_rotate<Scalar, InputCont, OutputCont>(
+pub(crate) fn apply_blind_rotate<InputScalar, InputCont, OutputCont>(
     bootstrapping_key: &ShortintBootstrappingKey,
     in_buffer: &LweCiphertext<InputCont>,
     acc: &mut GlweCiphertext<OutputCont>,
     buffers: &mut ComputationBuffers,
 ) where
-    Scalar: UnsignedTorus + CastInto<usize> + CastFrom<usize> + Sync,
-    InputCont: Container<Element = Scalar>,
-    OutputCont: ContainerMut<Element = Scalar>,
+    InputScalar: UnsignedTorus + CastInto<usize> + CastFrom<usize> + Sync,
+    InputCont: Container<Element = InputScalar>,
+    OutputCont: ContainerMut<Element = u64>,
 {
     #[cfg(feature = "pbs-stats")]
     let _ = PBS_COUNT.fetch_add(1, Ordering::Relaxed);
@@ -1632,30 +1639,28 @@ pub(crate) fn apply_blind_rotate<Scalar, InputCont, OutputCont>(
             // Compute the blind rotation
             blind_rotate_assign_mem_optimized(in_buffer, acc, fourier_bsk, fft, stack);
         }
-        ShortintBootstrappingKey::MultiBit {
-            fourier_bsk,
-            thread_count,
-            deterministic_execution,
-        } => {
-            multi_bit_blind_rotate_assign(
-                in_buffer,
-                acc,
-                fourier_bsk,
-                *thread_count,
-                *deterministic_execution,
-            );
+        ShortintBootstrappingKey::MultiBit { .. } => {
+            // multi_bit_blind_rotate_assign(
+            //     in_buffer,
+            //     acc,
+            //     fourier_bsk,
+            //     *thread_count,
+            //     *deterministic_execution,
+            // );
+            todo!()
         }
     };
 }
 
-pub(crate) fn apply_programmable_bootstrap<InputCont, OutputCont>(
+pub(crate) fn apply_programmable_bootstrap<InputScalar, InputCont, OutputCont>(
     bootstrapping_key: &ShortintBootstrappingKey,
     in_buffer: &LweCiphertext<InputCont>,
     out_buffer: &mut LweCiphertext<OutputCont>,
     acc: &GlweCiphertext<Vec<u64>>,
     buffers: &mut ComputationBuffers,
 ) where
-    InputCont: Container<Element = u64>,
+    InputScalar: UnsignedTorus + CastInto<usize> + CastFrom<usize> + Sync,
+    InputCont: Container<Element = InputScalar>,
     OutputCont: ContainerMut<Element = u64>,
 {
     let mut glwe_out: GlweCiphertext<_> = acc.clone();

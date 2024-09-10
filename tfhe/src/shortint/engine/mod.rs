@@ -37,6 +37,14 @@ pub struct BuffersRef<'a> {
     pub(crate) buffer_lwe_after_pbs: LweCiphertextMutView<'a, u64>,
 }
 
+#[allow(dead_code)]
+pub struct BuffersRef32<'a> {
+    // For the intermediate keyswitch result in the case of a big ciphertext
+    pub(crate) buffer_lwe_after_ks: LweCiphertextMutView<'a, u32>,
+    // For the intermediate PBS result in the case of a smallciphertext
+    pub(crate) buffer_lwe_after_pbs: LweCiphertextMutView<'a, u64>,
+}
+
 #[derive(Default)]
 struct Memory {
     buffer: Vec<u64>,
@@ -70,6 +78,47 @@ impl Memory {
             LweCiphertextMutView::from_container(after_pbs_elements, ciphertext_modulus);
 
         BuffersRef {
+            buffer_lwe_after_ks,
+            buffer_lwe_after_pbs,
+        }
+    }
+
+    fn as_buffers_32(
+        &mut self,
+        in_dim: LweDimension,
+        out_dim: LweDimension,
+        ciphertext_modulus: CiphertextModulus,
+    ) -> BuffersRef32<'_> {
+        let num_elem_in_lwe_after_ks = in_dim.to_lwe_size().0;
+        let num_elem_in_lwe_after_pbs = out_dim.to_lwe_size().0;
+
+        let total_elem_needed = num_elem_in_lwe_after_ks / 2 + num_elem_in_lwe_after_pbs;
+
+        let all_elements = if self.buffer.len() < total_elem_needed {
+            self.buffer.resize(total_elem_needed, 0u64);
+            self.buffer.as_mut_slice()
+        } else {
+            &mut self.buffer[..total_elem_needed]
+        };
+
+        let (after_ks_elements, after_pbs_elements) =
+            all_elements.split_at_mut(num_elem_in_lwe_after_ks / 2);
+
+        let after_ks_elements = unsafe {
+            let len_u64 = after_ks_elements.len();
+            let len_u32 = len_u64 * 2;
+            let ptr = after_ks_elements.as_mut_ptr().cast::<u32>();
+            core::slice::from_raw_parts_mut(ptr, len_u32)
+        };
+
+        let buffer_lwe_after_ks = LweCiphertextMutView::from_container(
+            after_ks_elements,
+            crate::core_crypto::commons::ciphertext_modulus::CiphertextModulus::new_native(),
+        );
+        let buffer_lwe_after_pbs =
+            LweCiphertextMutView::from_container(after_pbs_elements, ciphertext_modulus);
+
+        BuffersRef32 {
             buffer_lwe_after_ks,
             buffer_lwe_after_pbs,
         }
@@ -349,6 +398,25 @@ impl ShortintEngine {
             self.ciphertext_buffers.as_buffers(
                 server_key
                     .key_switching_key
+                    .output_lwe_size()
+                    .to_lwe_dimension(),
+                server_key.bootstrapping_key.output_lwe_dimension(),
+                server_key.ciphertext_modulus,
+            ),
+            &mut self.computation_buffers,
+        )
+    }
+
+    pub fn get_buffers_32(
+        &mut self,
+        server_key: &ServerKey,
+    ) -> (BuffersRef32<'_>, &mut ComputationBuffers) {
+        (
+            self.ciphertext_buffers.as_buffers_32(
+                server_key
+                    .ks_32_bits
+                    .as_ref()
+                    .unwrap()
                     .output_lwe_size()
                     .to_lwe_dimension(),
                 server_key.bootstrapping_key.output_lwe_dimension(),

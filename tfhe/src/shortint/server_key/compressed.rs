@@ -272,6 +272,7 @@ impl CompressedServerKey {
 
         ServerKey {
             key_switching_key,
+            ks_32_bits: None,
             bootstrapping_key,
             message_modulus,
             carry_modulus,
