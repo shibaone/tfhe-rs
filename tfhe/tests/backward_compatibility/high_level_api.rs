@@ -8,6 +8,8 @@ use tfhe::backward_compatibility::integers::{
 
 use tfhe::prelude::{CiphertextList, FheDecrypt, FheEncrypt};
 use tfhe::shortint::PBSParameters;
+#[cfg(feature = "zk-pok")]
+use tfhe::ProvenCompactCiphertextList;
 use tfhe::{
     set_server_key, ClientKey, CompactCiphertextList, CompressedCiphertextList,
     CompressedCompactPublicKey, CompressedFheBool, CompressedFheInt8, CompressedFheUint8,
@@ -261,7 +263,6 @@ pub fn test_hl_bool_ciphertext_list(
 
 /// Test HL ciphertext list: loads the ciphertext list and compare the decrypted values to the ones
 ///  in the metadata.
-
 pub fn test_hl_heterogeneous_ciphertext_list(
     dir: &Path,
     test: &HlHeterogeneousCiphertextListTest,
@@ -279,9 +280,26 @@ pub fn test_hl_heterogeneous_ciphertext_list(
     if test.compressed {
         let list: CompressedCiphertextList = load_and_unversionize(dir, test, format)?;
         test_hl_heterogeneous_ciphertext_list_elements(list, &key, test)
+    } else if test.proven {
+        #[cfg(feature = "zk-pok")]
+        {
+            let list: ProvenCompactCiphertextList = load_and_unversionize(dir, test, format)?;
+            test_hl_heterogeneous_ciphertext_list_elements(
+                list.verify_and_expand()
+                    .map_err(|msg| test.failure(msg, format))?,
+                &key,
+                test,
+            )
+        }
+        #[cfg(not(feature = "zk-pok"))]
+        Ok(())
     } else {
         let list: CompactCiphertextList = load_and_unversionize(dir, test, format)?;
-        test_hl_heterogeneous_ciphertext_list_elements(list.expand().unwrap(), &key, test)
+        test_hl_heterogeneous_ciphertext_list_elements(
+            list.expand().map_err(|msg| test.failure(msg, format))?,
+            &key,
+            test,
+        )
     }
     .map(|_| test.success(format))
     .map_err(|msg| test.failure(msg, format))
