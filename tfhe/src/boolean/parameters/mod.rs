@@ -127,31 +127,14 @@ impl BooleanKeySwitchingParameters {
 /// $2^{-40}$. The secret keys generated with this parameter set are uniform binary.
 /// This parameter set allows to evaluate faster Boolean circuits than the `TFHE_LIB_PARAMETERS`
 /// one.
-pub const DEFAULT_PARAMETERS: BooleanParameters = BooleanParameters {
-    lwe_dimension: LweDimension(811),
-    glwe_dimension: GlweDimension(3),
-    polynomial_size: PolynomialSize(512),
-    #[allow(clippy::excessive_precision)]
-    lwe_noise_distribution: DynamicDistribution::new_gaussian_from_std_dev(StandardDev(
-        5.2851456906764125e-06,
-    )),
-    glwe_noise_distribution: DynamicDistribution::new_gaussian_from_std_dev(StandardDev(
-        9.315272083503367e-10,
-    )),
-    pbs_base_log: DecompositionBaseLog(10),
-    pbs_level: DecompositionLevelCount(2),
-    ks_base_log: DecompositionBaseLog(3),
-    ks_level: DecompositionLevelCount(5),
-    encryption_key_choice: EncryptionKeyChoice::Small,
-};
-
+// p-fail = 2^-64.017, algorithmic cost ~ 67, 2-norm = 2.8284271247461903
 pub const DEFAULT_PARAMETERS_KS_PBS: BooleanParameters = BooleanParameters {
-    lwe_dimension: LweDimension(746),
+    lwe_dimension: LweDimension(739),
     glwe_dimension: GlweDimension(3),
     polynomial_size: PolynomialSize(512),
     #[allow(clippy::excessive_precision)]
     lwe_noise_distribution: DynamicDistribution::new_gaussian_from_std_dev(StandardDev(
-        1.622209113562635e-05,
+        1.8304520733507305e-05,
     )),
     glwe_noise_distribution: DynamicDistribution::new_gaussian_from_std_dev(StandardDev(
         9.315272083503367e-10,
@@ -163,19 +146,17 @@ pub const DEFAULT_PARAMETERS_KS_PBS: BooleanParameters = BooleanParameters {
     encryption_key_choice: EncryptionKeyChoice::Big,
 };
 
-/// The secret keys generated with this parameter set are uniform binary.
-/// This parameter set ensures a probability of error upper-bounded by $2^{-165}$
-/// for for 128-bits of security.
-pub const PARAMETERS_ERROR_PROB_2_POW_MINUS_165: BooleanParameters = BooleanParameters {
-    lwe_dimension: LweDimension(843),
-    glwe_dimension: GlweDimension(2),
-    polynomial_size: PolynomialSize(1024),
+// p-fail = 2^-64.344, algorithmic cost ~ 75, 2-norm = 2.8284271247461903
+pub const DEFAULT_PARAMETERS: BooleanParameters = BooleanParameters {
+    lwe_dimension: LweDimension(805),
+    glwe_dimension: GlweDimension(3),
+    polynomial_size: PolynomialSize(512),
     #[allow(clippy::excessive_precision)]
     lwe_noise_distribution: DynamicDistribution::new_gaussian_from_std_dev(StandardDev(
-        3.0428362050688556e-06,
+        5.8615896642671336e-06,
     )),
     glwe_noise_distribution: DynamicDistribution::new_gaussian_from_std_dev(StandardDev(
-        9.313225746198247e-10,
+        9.315272083503367e-10,
     )),
     pbs_base_log: DecompositionBaseLog(10),
     pbs_level: DecompositionLevelCount(2),
@@ -184,13 +165,14 @@ pub const PARAMETERS_ERROR_PROB_2_POW_MINUS_165: BooleanParameters = BooleanPara
     encryption_key_choice: EncryptionKeyChoice::Small,
 };
 
+// p-fail = 2^-166.826, algorithmic cost ~ 108, 2-norm = 2.8284271247461903
 pub const PARAMETERS_ERROR_PROB_2_POW_MINUS_165_KS_PBS: BooleanParameters = BooleanParameters {
-    lwe_dimension: LweDimension(776),
+    lwe_dimension: LweDimension(770),
     glwe_dimension: GlweDimension(2),
     polynomial_size: PolynomialSize(1024),
     #[allow(clippy::excessive_precision)]
     lwe_noise_distribution: DynamicDistribution::new_gaussian_from_std_dev(StandardDev(
-        9.66750902600141e-06,
+        1.0721931696480342e-05,
     )),
     glwe_noise_distribution: DynamicDistribution::new_gaussian_from_std_dev(StandardDev(
         9.313225746198247e-10,
@@ -200,6 +182,28 @@ pub const PARAMETERS_ERROR_PROB_2_POW_MINUS_165_KS_PBS: BooleanParameters = Bool
     ks_base_log: DecompositionBaseLog(3),
     ks_level: DecompositionLevelCount(5),
     encryption_key_choice: EncryptionKeyChoice::Big,
+};
+
+/// The secret keys generated with this parameter set are uniform binary.
+/// This parameter set ensures a probability of error upper-bounded by $2^{-165}$
+/// for 128-bits of security.
+// p-fail = 2^-165.434, algorithmic cost ~ 117, 2-norm = 2.8284271247461903
+pub const PARAMETERS_ERROR_PROB_2_POW_MINUS_165: BooleanParameters = BooleanParameters {
+    lwe_dimension: LweDimension(837),
+    glwe_dimension: GlweDimension(2),
+    polynomial_size: PolynomialSize(1024),
+    #[allow(clippy::excessive_precision)]
+    lwe_noise_distribution: DynamicDistribution::new_gaussian_from_std_dev(StandardDev(
+        3.374714376692653e-06,
+    )),
+    glwe_noise_distribution: DynamicDistribution::new_gaussian_from_std_dev(StandardDev(
+        9.313225746198247e-10,
+    )),
+    pbs_base_log: DecompositionBaseLog(10),
+    pbs_level: DecompositionLevelCount(2),
+    ks_base_log: DecompositionBaseLog(3),
+    ks_level: DecompositionLevelCount(5),
+    encryption_key_choice: EncryptionKeyChoice::Small,
 };
 
 /// Parameter sets given in TFHE-lib:
