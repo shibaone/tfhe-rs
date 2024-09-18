@@ -10,7 +10,7 @@ pub fn verify_lwe_compact_ciphertext_list<Scalar, ListCont, KeyCont>(
     compact_public_key: &LweCompactPublicKey<KeyCont>,
     proof: &CompactPkeProof,
     public_params: &CompactPkePublicParams,
-    metadata: &[u8],
+    _metadata: &[u8],
 ) -> ZkVerificationOutCome
 where
     Scalar: UnsignedInteger,
@@ -51,7 +51,7 @@ where
             .map(|x| i64::cast_from(x))
             .collect(),
     );
-    match verify(proof, (public_params, &public_commit), metadata) {
+    match verify(proof, (public_params, &public_commit)) {
         Ok(_) => ZkVerificationOutCome::Valid,
         Err(_) => ZkVerificationOutCome::Invalid,
     }
@@ -62,7 +62,7 @@ pub fn verify_lwe_ciphertext<Scalar, Cont, KeyCont>(
     compact_public_key: &LweCompactPublicKey<KeyCont>,
     proof: &CompactPkeProof,
     public_params: &CompactPkePublicParams,
-    metadata: &[u8],
+    _metadata: &[u8],
 ) -> ZkVerificationOutCome
 where
     Scalar: UnsignedInteger,
@@ -97,7 +97,7 @@ where
             .collect(),
         vec![i64::cast_from(*lwe_ciphertext.get_body().data); 1],
     );
-    match verify(proof, (public_params, &public_commit), metadata) {
+    match verify(proof, (public_params, &public_commit)) {
         Ok(_) => ZkVerificationOutCome::Valid,
         Err(_) => ZkVerificationOutCome::Invalid,
     }

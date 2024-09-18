@@ -2247,7 +2247,7 @@ pub fn encrypt_and_prove_lwe_ciphertext_with_compact_public_key<
     encryption_generator: &mut EncryptionRandomGenerator<EncryptionGen>,
     random_generator: &mut RandomGenerator<G>,
     public_params: &CompactPkePublicParams,
-    metadata: &[u8],
+    _metadata: &[u8],
     load: ZkComputeLoad,
 ) -> crate::Result<CompactPkeProof>
 where
@@ -2335,7 +2335,6 @@ where
     Ok(prove(
         (public_params, &public_commit),
         &private_commit,
-        metadata,
         load,
         random_generator,
     ))
@@ -2746,7 +2745,7 @@ pub fn encrypt_and_prove_lwe_compact_ciphertext_list_with_compact_public_key<
     encryption_generator: &mut EncryptionRandomGenerator<EncryptionGen>,
     random_generator: &mut RandomGenerator<G>,
     public_params: &CompactPkePublicParams,
-    metadata: &[u8],
+    _metadata: &[u8],
     load: ZkComputeLoad,
 ) -> crate::Result<CompactPkeProof>
 where
@@ -2853,7 +2852,6 @@ where
     Ok(prove(
         (public_params, &public_commit),
         &private_commit,
-        metadata,
         load,
         random_generator,
     ))
@@ -3274,7 +3272,7 @@ pub fn par_encrypt_and_prove_lwe_compact_ciphertext_list_with_compact_public_key
     encryption_generator: &mut EncryptionRandomGenerator<EncryptionGen>,
     random_generator: &mut RandomGenerator<G>,
     public_params: &CompactPkePublicParams,
-    metadata: &[u8],
+    _metadata: &[u8],
     load: ZkComputeLoad,
 ) -> crate::Result<CompactPkeProof>
 where
@@ -3381,7 +3379,6 @@ where
     Ok(prove(
         (public_params, &public_commit),
         &private_commit,
-        metadata,
         load,
         random_generator,
     ))
