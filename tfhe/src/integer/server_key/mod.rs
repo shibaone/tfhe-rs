@@ -8,6 +8,7 @@ mod crt_parallel;
 pub(crate) mod radix;
 pub(crate) mod radix_parallel;
 
+use crate::conformance::ParameterSetConformant;
 use crate::integer::client_key::ClientKey;
 use crate::shortint::ciphertext::{Degree, MaxDegree};
 use serde::{Deserialize, Serialize};
@@ -16,7 +17,7 @@ use tfhe_versionable::Versionize;
 use crate::core_crypto::prelude::UnsignedInteger;
 /// Error returned when the carry buffer is full.
 pub use crate::shortint::CheckError;
-use crate::shortint::{CarryModulus, MessageModulus};
+use crate::shortint::{CarryModulus, MessageModulus, PBSParameters};
 pub use radix::scalar_mul::ScalarMultiplier;
 pub use radix::scalar_sub::TwosComplementNegation;
 pub use radix_parallel::{MatchValues, MiniUnsignedInteger, Reciprocable};
@@ -289,6 +290,16 @@ impl CompressedServerKey {
     /// Construct a [`CompressedServerKey`] from its constituents.
     pub fn from_raw_parts(key: crate::shortint::CompressedServerKey) -> Self {
         Self { key }
+    }
+}
+
+impl ParameterSetConformant for ServerKey {
+    type ParameterSet = PBSParameters;
+
+    fn is_conformant(&self, parameter_set: &Self::ParameterSet) -> bool {
+        let Self { key } = self;
+
+        key.is_conformant(parameter_set)
     }
 }
 

@@ -1,5 +1,6 @@
 use super::super::math::fft::{Fft, FftView, FourierPolynomialList};
 use super::ggsw::*;
+use crate::conformance::ParameterSetConformant;
 use crate::core_crypto::algorithms::extract_lwe_sample_from_glwe_ciphertext;
 use crate::core_crypto::algorithms::polynomial_algorithms::*;
 use crate::core_crypto::backward_compatibility::fft_impl::{
@@ -20,7 +21,7 @@ use crate::core_crypto::commons::utils::izip;
 use crate::core_crypto::entities::*;
 use crate::core_crypto::fft_impl::common::{pbs_modulus_switch, FourierBootstrapKey};
 use crate::core_crypto::fft_impl::fft64::math::fft::par_convert_polynomials_list_to_fourier;
-use crate::core_crypto::prelude::ContainerMut;
+use crate::core_crypto::prelude::{CiphertextModulus, ContainerMut};
 use aligned_vec::{avec, ABox, CACHELINE_ALIGN};
 use concrete_fft::c64;
 use dyn_stack::{PodStack, ReborrowMut, SizeOverflow, StackReq};
@@ -523,5 +524,44 @@ where
             fft.as_view(),
             stack,
         );
+    }
+}
+
+pub struct BootstrapKeyConformanceParams {
+    pub decomp_base_log: DecompositionBaseLog,
+    pub decomp_level_count: DecompositionLevelCount,
+    pub input_lwe_dimension: LweDimension,
+    pub output_glwe_size: GlweSize,
+    pub polynomial_size: PolynomialSize,
+    pub ciphertext_modulus: CiphertextModulus<u64>,
+}
+
+impl<C: Container<Element = c64>> ParameterSetConformant for FourierLweBootstrapKey<C> {
+    type ParameterSet = BootstrapKeyConformanceParams;
+
+    fn is_conformant(&self, parameter_set: &Self::ParameterSet) -> bool {
+        let Self {
+            fourier:
+                FourierPolynomialList {
+                    data,
+                    polynomial_size,
+                },
+            input_lwe_dimension,
+            glwe_size,
+            decomposition_base_log,
+            decomposition_level_count,
+        } = self;
+
+        data.container_len()
+            == polynomial_size.to_fourier_polynomial_size().0
+                * glwe_size.0
+                * glwe_size.0
+                * input_lwe_dimension.0
+                * decomposition_level_count.0
+            && *decomposition_base_log == parameter_set.decomp_base_log
+            && *decomposition_level_count == parameter_set.decomp_level_count
+            && *input_lwe_dimension == parameter_set.input_lwe_dimension
+            && *glwe_size == parameter_set.output_glwe_size
+            && *polynomial_size == parameter_set.polynomial_size
     }
 }

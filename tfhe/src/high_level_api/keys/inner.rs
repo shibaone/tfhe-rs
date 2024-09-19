@@ -1,3 +1,4 @@
+use crate::conformance::ParameterSetConformant;
 use crate::core_crypto::commons::generators::DeterministicSeeder;
 use crate::core_crypto::prelude::ActivatedRandomGenerator;
 use crate::high_level_api::backward_compatibility::keys::*;
@@ -7,8 +8,10 @@ use crate::integer::compression_keys::{
 };
 use crate::integer::public_key::CompactPublicKey;
 use crate::integer::CompressedCompactPublicKey;
+use crate::shortint::key_switching_key::KeySwitchingKeyConformanceParams2;
+use crate::shortint::list_compression::CompressionParameters2;
 use crate::shortint::parameters::list_compression::CompressionParameters;
-use crate::shortint::MessageModulus;
+use crate::shortint::{MessageModulus, PBSParameters};
 use crate::Error;
 use concrete_csprng::seeders::Seed;
 use serde::{Deserialize, Serialize};
@@ -445,5 +448,52 @@ impl IntegerCompressedCompactPublicKey {
         IntegerCompactPublicKey {
             key: CompressedCompactPublicKey::decompress(&self.key),
         }
+    }
+}
+
+pub struct IntegerServerKeyConformanceParams {
+    pub sk: PBSParameters,
+    pub cpk_param: Option<KeySwitchingKeyConformanceParams2>,
+    pub compression_param: Option<CompressionParameters2>,
+}
+
+impl ParameterSetConformant for IntegerServerKey {
+    type ParameterSet = IntegerServerKeyConformanceParams;
+
+    fn is_conformant(&self, parameter_set: &Self::ParameterSet) -> bool {
+        let Self {
+            key,
+            cpk_key_switching_key_material,
+            compression_key,
+            decompression_key,
+        } = self;
+
+        let cpk_key_switching_key_material_is_ok = match (
+            parameter_set.cpk_param.as_ref(),
+            cpk_key_switching_key_material.as_ref(),
+        ) {
+            (None, None) => true,
+            (Some(cpk_param), Some(cpk_key_switching_key_material)) => {
+                cpk_key_switching_key_material.is_conformant(cpk_param)
+            }
+            _ => false,
+        };
+
+        let compression_is_ok = match (
+            compression_key.as_ref(),
+            decompression_key.as_ref(),
+            parameter_set.compression_param.as_ref(),
+        ) {
+            (None, None, None) => true,
+            (Some(compression_key), Some(decompression_key), Some(compression_param)) => {
+                compression_key.is_conformant(compression_param)
+                    && decompression_key.is_conformant(compression_param)
+            }
+            _ => false,
+        };
+
+        key.is_conformant(&parameter_set.sk)
+            && cpk_key_switching_key_material_is_ok
+            && compression_is_ok
     }
 }

@@ -2,9 +2,10 @@
 //!
 //! - [KeySwitchingKey] allows switching the keys of a ciphertext, from a cleitn key to another.
 
+use crate::conformance::ParameterSetConformant;
 use crate::core_crypto::prelude::{
     decompress_seeded_lwe_keyswitch_key, keyswitch_lwe_ciphertext, ActivatedRandomGenerator,
-    LweKeyswitchKeyOwned, SeededLweKeyswitchKeyOwned,
+    KeyswitchKeyConformanceParams, LweKeyswitchKeyOwned, SeededLweKeyswitchKeyOwned,
 };
 use crate::shortint::ciphertext::Degree;
 use crate::shortint::client_key::secret_encryption_key::SecretEncryptionKeyView;
@@ -881,5 +882,27 @@ impl CompressedKeySwitchingKey {
             dest_server_key,
             src_server_key,
         }
+    }
+}
+
+pub struct KeySwitchingKeyConformanceParams2 {
+    keyswitch_key_conformance_params: KeyswitchKeyConformanceParams,
+    cast_rshift: i8,
+    destination_key: EncryptionKeyChoice,
+}
+
+impl ParameterSetConformant for KeySwitchingKeyMaterial {
+    type ParameterSet = KeySwitchingKeyConformanceParams2;
+
+    fn is_conformant(&self, parameter_set: &Self::ParameterSet) -> bool {
+        let Self {
+            key_switching_key,
+            cast_rshift,
+            destination_key,
+        } = self;
+
+        key_switching_key.is_conformant(&parameter_set.keyswitch_key_conformance_params)
+            && *cast_rshift == parameter_set.cast_rshift
+            && *destination_key == parameter_set.destination_key
     }
 }

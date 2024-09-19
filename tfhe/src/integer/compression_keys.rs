@@ -1,4 +1,5 @@
 use super::ClientKey;
+use crate::conformance::ParameterSetConformant;
 use crate::integer::backward_compatibility::list_compression::*;
 use serde::{Deserialize, Serialize};
 use tfhe_versionable::Versionize;
@@ -95,5 +96,27 @@ impl ClientKey {
             CompressedCompressionKey { key: comp_key },
             CompressedDecompressionKey { key: decomp_key },
         )
+    }
+}
+
+use crate::shortint::list_compression::CompressionParameters2;
+
+impl ParameterSetConformant for CompressionKey {
+    type ParameterSet = CompressionParameters2;
+
+    fn is_conformant(&self, parameter_set: &Self::ParameterSet) -> bool {
+        let Self { key } = self;
+
+        key.is_conformant(parameter_set)
+    }
+}
+
+impl ParameterSetConformant for DecompressionKey {
+    type ParameterSet = CompressionParameters2;
+
+    fn is_conformant(&self, parameter_set: &Self::ParameterSet) -> bool {
+        let Self { key } = self;
+
+        key.is_conformant(parameter_set)
     }
 }

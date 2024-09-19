@@ -2,6 +2,7 @@ use tfhe_versionable::Versionize;
 
 use super::ClientKey;
 use crate::backward_compatibility::keys::{CompressedServerKeyVersions, ServerKeyVersions};
+use crate::conformance::ParameterSetConformant;
 #[cfg(feature = "gpu")]
 use crate::core_crypto::gpu::{synchronize_devices, CudaStreams};
 use crate::high_level_api::keys::{IntegerCompressedServerKey, IntegerServerKey};
@@ -304,5 +305,17 @@ impl From<ServerKey> for InternalServerKey {
 impl From<CudaServerKey> for InternalServerKey {
     fn from(value: CudaServerKey) -> Self {
         Self::Cuda(value)
+    }
+}
+
+use crate::high_level_api::keys::inner::IntegerServerKeyConformanceParams;
+
+impl ParameterSetConformant for ServerKey {
+    type ParameterSet = IntegerServerKeyConformanceParams;
+
+    fn is_conformant(&self, parameter_set: &Self::ParameterSet) -> bool {
+        let Self { key, tag: _ } = self;
+
+        key.is_conformant(parameter_set)
     }
 }
