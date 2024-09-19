@@ -6,7 +6,7 @@
 cudaStream_t cuda_create_stream(uint32_t gpu_index) {
   check_cuda_error(cudaSetDevice(gpu_index));
   cudaStream_t stream;
-  check_cuda_error(cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking));
+  check_cuda_error(cudaStreamCreate(&stream));
   return stream;
 }
 
@@ -19,17 +19,6 @@ void cuda_destroy_stream(cudaStream_t stream, uint32_t gpu_index) {
 void cuda_synchronize_stream(cudaStream_t stream, uint32_t gpu_index) {
   check_cuda_error(cudaSetDevice(gpu_index));
   check_cuda_error(cudaStreamSynchronize(stream));
-}
-
-/// Unsafe function that will try to allocate even if gpu_index is invalid
-/// or if there's not enough memory. A safe wrapper around it must call
-/// cuda_check_valid_malloc() first
-void *cuda_malloc(uint64_t size, uint32_t gpu_index) {
-  check_cuda_error(cudaSetDevice(gpu_index));
-  void *ptr;
-  check_cuda_error(cudaMalloc((void **)&ptr, size));
-
-  return ptr;
 }
 
 /// Allocates a size-byte array at the device memory. Tries to do it
@@ -55,18 +44,6 @@ void *cuda_malloc_async(uint64_t size, cudaStream_t stream,
   check_cuda_error(cudaMalloc((void **)&ptr, size));
 #endif
   return ptr;
-}
-
-/// Check that allocation is valid
-void cuda_check_valid_malloc(uint64_t size, uint32_t gpu_index) {
-  check_cuda_error(cudaSetDevice(gpu_index));
-  size_t total_mem, free_mem;
-  check_cuda_error(cudaMemGetInfo(&free_mem, &total_mem));
-  if (size > free_mem) {
-    PANIC("Cuda error: not enough memory on device. "
-          "Available: %zu vs Requested: %lu",
-          free_mem, size)
-  }
 }
 
 /// Returns
@@ -135,12 +112,6 @@ void cuda_memcpy_async_gpu_to_gpu(void *dest, void *src, uint64_t size,
     check_cuda_error(cudaMemcpyPeerAsync(dest, attr_dest.device, src,
                                          attr_src.device, size, stream));
   }
-}
-
-/// Synchronizes device
-void cuda_synchronize_device(uint32_t gpu_index) {
-  check_cuda_error(cudaSetDevice(gpu_index));
-  check_cuda_error(cudaDeviceSynchronize());
 }
 
 void cuda_memset_async(void *dest, uint64_t val, uint64_t size,

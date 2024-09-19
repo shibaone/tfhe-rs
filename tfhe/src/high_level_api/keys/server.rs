@@ -3,7 +3,7 @@ use tfhe_versionable::Versionize;
 use super::ClientKey;
 use crate::backward_compatibility::keys::{CompressedServerKeyVersions, ServerKeyVersions};
 #[cfg(feature = "gpu")]
-use crate::core_crypto::gpu::{synchronize_devices, CudaStreams};
+use crate::core_crypto::gpu::CudaStreams;
 use crate::high_level_api::keys::{IntegerCompressedServerKey, IntegerServerKey};
 use crate::integer::compression_keys::{
     CompressedCompressionKey, CompressedDecompressionKey, CompressionKey, DecompressionKey,
@@ -232,12 +232,11 @@ impl CompressedServerKey {
     #[cfg(feature = "gpu")]
     pub fn decompress_to_gpu(&self) -> CudaServerKey {
         let streams = CudaStreams::new_multi_gpu();
-        synchronize_devices(streams.len() as u32);
         let cuda_key = crate::integer::gpu::CudaServerKey::decompress_from_cpu(
             &self.integer_key.key,
             &streams,
         );
-        synchronize_devices(streams.len() as u32);
+        streams.synchronize();
         CudaServerKey {
             key: Arc::new(cuda_key),
             tag: self.tag.clone(),

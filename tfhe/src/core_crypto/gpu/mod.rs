@@ -666,18 +666,6 @@ pub fn setup_multi_gpu() -> i32 {
     unsafe { cuda_setup_multi_gpu() }
 }
 
-/// Synchronize device
-pub fn synchronize_device(gpu_index: u32) {
-    unsafe { cuda_synchronize_device(gpu_index) }
-}
-
-/// Synchronize all devices
-pub fn synchronize_devices(gpu_count: u32) {
-    for i in 0..gpu_count {
-        unsafe { cuda_synchronize_device(i) }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

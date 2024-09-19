@@ -9,11 +9,7 @@ extern "C" {
 
     pub fn cuda_synchronize_stream(stream: *mut c_void, gpu_index: u32);
 
-    pub fn cuda_malloc(size: u64, gpu_index: u32) -> *mut c_void;
-
     pub fn cuda_malloc_async(size: u64, stream: *mut c_void, gpu_index: u32) -> *mut c_void;
-
-    pub fn cuda_check_valid_malloc(size: u64, gpu_index: u32);
 
     pub fn cuda_memcpy_async_to_gpu(
         dest: *mut c_void,
@@ -48,8 +44,6 @@ extern "C" {
     );
 
     pub fn cuda_get_number_of_gpus() -> i32;
-
-    pub fn cuda_synchronize_device(gpu_index: u32);
 
     pub fn cuda_drop(ptr: *mut c_void, gpu_index: u32);
 
