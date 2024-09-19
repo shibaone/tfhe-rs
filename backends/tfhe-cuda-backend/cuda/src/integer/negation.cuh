@@ -32,6 +32,7 @@ device_integer_radix_negation(Torus *output, Torus *input, int32_t num_blocks,
 
     // z = ceil( degree / 2^p ) * 2^p
     uint64_t z = (2 * message_modulus - 1) / message_modulus;
+    __syncthreads();
     z *= message_modulus;
 
     // (0,Delta*z) - ct
@@ -46,9 +47,12 @@ device_integer_radix_negation(Torus *output, Torus *input, int32_t num_blocks,
 
       uint64_t encoded_zb = zb * delta;
 
+      __syncthreads();
+
       // (0,Delta*z) - ct
       output[tid] =
           (is_body ? z * delta - (input[tid] + encoded_zb) : -input[tid]);
+      __syncthreads();
     }
   }
 }
