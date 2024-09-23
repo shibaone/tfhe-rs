@@ -456,9 +456,9 @@ uint32_t get_lwe_chunk_size(uint32_t gpu_index, uint32_t max_num_pbs,
   //                                                         FULLSM>,
   //       polynomial_size / params::opt, 0);
   
-  int num_sms = 0;
-  check_cuda_error(cudaDeviceGetAttribute(
-      &num_sms, cudaDevAttrMultiProcessorCount, gpu_index));
+  int num_sms = 144;
+  // check_cuda_error(cudaDeviceGetAttribute(
+  //     &num_sms, cudaDevAttrMultiProcessorCount, gpu_index));
 
   int x = num_sms * max_blocks_per_sm;
   int count = 0;
