@@ -13,6 +13,7 @@
 #include "utils/helper.cuh"
 #include "utils/helper_multi_gpu.cuh"
 #include "utils/kernel_dimensions.cuh"
+#include "utils/helper_profile.cuh"
 #include <functional>
 
 // function rotates right  radix ciphertext with specific value
@@ -188,7 +189,7 @@ __host__ void integer_radix_apply_univariate_lookup_table_kb(
   auto glwe_dimension = params.glwe_dimension;
   auto polynomial_size = params.polynomial_size;
   auto grouping_factor = params.grouping_factor;
-
+  PUSH_RANGE("apply_lookup_table");
   // In the case of extracting a single LWE this parameters are dummy
   uint32_t lut_count = 1;
   uint32_t lut_stride = 0;
@@ -255,6 +256,7 @@ __host__ void integer_radix_apply_univariate_lookup_table_kb(
       cuda_synchronize_stream(streams[i], gpu_indexes[i]);
     }
   }
+  POP_RANGE();
 }
 
 template <typename Torus>
@@ -360,6 +362,7 @@ __host__ void integer_radix_apply_bivariate_lookup_table_kb(
   auto polynomial_size = params.polynomial_size;
   auto grouping_factor = params.grouping_factor;
 
+  PUSH_RANGE("apply_bivariate_lut");
   // In the case of extracting a single LWE this parameters are dummy
   uint32_t lut_count = 1;
   uint32_t lut_stride = 0;
@@ -431,6 +434,7 @@ __host__ void integer_radix_apply_bivariate_lookup_table_kb(
       cuda_synchronize_stream(streams[i], gpu_indexes[i]);
     }
   }
+  POP_RANGE();
 }
 
 // Rotates the slice in-place such that the first mid elements of the slice move
@@ -681,11 +685,12 @@ void host_propagate_single_carry(cudaStream_t *streams, uint32_t *gpu_indexes,
       streams, gpu_indexes, gpu_count, generates_or_propagates, lwe_array, bsks,
       ksks, num_blocks, luts_array);
 
+  PUSH_RANGE("compute_prefix_sum_hillis_steele");
   // compute prefix sum with hillis&steele
   host_compute_prefix_sum_hillis_steele<Torus>(
       streams, gpu_indexes, gpu_count, step_output, generates_or_propagates,
       params, luts_carry_propagation_sum, bsks, ksks, num_blocks);
-
+  POP_RANGE();
   host_radix_blocks_rotate_right<Torus>(streams, gpu_indexes, gpu_count,
                                         step_output, generates_or_propagates, 1,
                                         num_blocks, big_lwe_size);

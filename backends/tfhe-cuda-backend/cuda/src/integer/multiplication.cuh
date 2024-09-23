@@ -286,6 +286,7 @@ __host__ void host_integer_partial_sum_ciphertexts_vec_kb(
   luts_message_carry->broadcast_lut(streams, gpu_indexes, gpu_indexes[0]);
 
   while (r > 2) {
+    PUSH_RANGE("Loop in partial sum");
     size_t cur_total_blocks = r * num_blocks;
     size_t ch_amount = r / chunk_size;
     if (!ch_amount)
@@ -353,14 +354,16 @@ __host__ void host_integer_partial_sum_ciphertexts_vec_kb(
       /// After this keyswitch execution, we need to synchronize the streams
       /// because the keyswitch and PBS do not operate on the same number of
       /// inputs
+      PUSH_RANGE("KeySwitch")
       execute_keyswitch_async<Torus>(
           streams, gpu_indexes, 1, small_lwe_vector, lwe_indexes_in, new_blocks,
           lwe_indexes_in, ksks, polynomial_size * glwe_dimension,
           small_lwe_dimension, mem_ptr->params.ks_base_log,
           mem_ptr->params.ks_level, message_count);
-
+      POP_RANGE();
       /// Apply PBS to apply a LUT, reduce the noise and go from a small LWE
       /// dimension to a big LWE dimension
+      PUSH_RANGE("PBS")
       execute_pbs_async<Torus>(
           streams, gpu_indexes, 1, new_blocks, lwe_indexes_out,
           luts_message_carry->lut_vec, luts_message_carry->lut_indexes_vec,
@@ -369,6 +372,7 @@ __host__ void host_integer_partial_sum_ciphertexts_vec_kb(
           mem_ptr->params.pbs_base_log, mem_ptr->params.pbs_level,
           mem_ptr->params.grouping_factor, total_count,
           mem_ptr->params.pbs_type, lut_count, lut_stride);
+      POP_RANGE();
     } else {
       cuda_synchronize_stream(streams[0], gpu_indexes[0]);
 
@@ -427,8 +431,10 @@ __host__ void host_integer_partial_sum_ciphertexts_vec_kb(
       for (uint i = 0; i < active_gpu_count; i++) {
         cuda_synchronize_stream(streams[i], gpu_indexes[i]);
       }
+      
     }
-
+    POP_RANGE();
+    PUSH_RANGE("tail of loop");
     int rem_blocks = (r > chunk_size) ? r % chunk_size * num_blocks : 0;
     int new_blocks_created = 2 * ch_amount * num_blocks;
     copy_size = rem_blocks * big_lwe_size * sizeof(Torus);
@@ -439,6 +445,7 @@ __host__ void host_integer_partial_sum_ciphertexts_vec_kb(
                                  gpu_indexes[0]);
     std::swap(new_blocks, old_blocks);
     r = (new_blocks_created + rem_blocks) / num_blocks;
+    POP_RANGE();
   }
   luts_message_carry->release(streams, gpu_indexes, gpu_count);
   delete (luts_message_carry);
@@ -455,6 +462,7 @@ __host__ void host_integer_mult_radix_kb(
     uint64_t *radix_lwe_right, void **bsks, uint64_t **ksks,
     int_mul_memory<Torus> *mem_ptr, uint32_t num_blocks) {
 
+  PUSH_RANGE("host_integer_mult_radix_kb")
   auto glwe_dimension = mem_ptr->params.glwe_dimension;
   auto polynomial_size = mem_ptr->params.polynomial_size;
   auto lwe_dimension = mem_ptr->params.small_lwe_dimension;
@@ -562,9 +570,12 @@ __host__ void host_integer_mult_radix_kb(
       2 * num_blocks, mem_ptr->luts_array);
 
   auto scp_mem_ptr = mem_ptr->sum_ciphertexts_mem->scp_mem;
+  POP_RANGE()
+  PUSH_RANGE("Propagate single carry")
   host_propagate_single_carry<Torus>(streams, gpu_indexes, gpu_count,
                                      radix_lwe_out, nullptr, nullptr,
                                      scp_mem_ptr, bsks, ksks, num_blocks);
+  POP_RANGE()
 }
 
 template <typename Torus>

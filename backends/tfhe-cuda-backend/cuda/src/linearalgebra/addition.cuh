@@ -10,6 +10,7 @@
 #include "helper_multi_gpu.h"
 #include "linear_algebra.h"
 #include "utils/kernel_dimensions.cuh"
+#include "utils/helper_profile.cuh"
 #include <stdio.h>
 
 template <typename T>
@@ -67,6 +68,7 @@ __host__ void host_addition(cudaStream_t stream, uint32_t gpu_index, T *output,
                             uint32_t input_lwe_dimension,
                             uint32_t input_lwe_ciphertext_count) {
 
+  PUSH_RANGE("simple_addition");
   cudaSetDevice(gpu_index);
   // lwe_size includes the presence of the body
   // whereas lwe_dimension is the number of elements in the mask
@@ -80,6 +82,7 @@ __host__ void host_addition(cudaStream_t stream, uint32_t gpu_index, T *output,
 
   addition<T><<<grid, thds, 0, stream>>>(output, input_1, input_2, num_entries);
   check_cuda_error(cudaGetLastError());
+  POP_RANGE();
 }
 
 template <typename T>

@@ -1,11 +1,12 @@
 #include "integer/integer.cuh"
+#include "utils/helper_profile.cuh"
 #include <linear_algebra.h>
 
 void cuda_full_propagation_64_inplace(void **streams, uint32_t *gpu_indexes,
                                       uint32_t gpu_count, void *input_blocks,
                                       int8_t *mem_ptr, void **ksks, void **bsks,
                                       uint32_t num_blocks) {
-
+  PUSH_RANGE("full_propagation");
   int_fullprop_buffer<uint64_t> *buffer =
       (int_fullprop_buffer<uint64_t> *)mem_ptr;
 
@@ -13,6 +14,7 @@ void cuda_full_propagation_64_inplace(void **streams, uint32_t *gpu_indexes,
       (cudaStream_t *)(streams), gpu_indexes, gpu_count,
       static_cast<uint64_t *>(input_blocks), buffer, (uint64_t **)(ksks), bsks,
       num_blocks);
+  POP_RANGE();
 }
 
 void scratch_cuda_full_propagation_64(
