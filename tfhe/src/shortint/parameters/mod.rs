@@ -43,7 +43,7 @@ pub use crate::shortint::parameters::classic::tuniform::p_fail_2_minus_64::pbs_k
 pub use crate::shortint::parameters::list_compression::CompressionParameters;
 pub use compact_public_key_only::{
     CompactCiphertextListExpansionKind, CompactPublicKeyEncryptionParameters,
-    ShortintCompactCiphertextListCastingMode,
+    ShortintCompactCiphertextListCastingMode, ShortintCompactCiphertextListUnpackingMode,
 };
 #[cfg(tarpaulin)]
 pub use coverage_parameters::*;

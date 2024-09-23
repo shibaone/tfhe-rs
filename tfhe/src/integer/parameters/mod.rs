@@ -2,10 +2,12 @@
 use crate::conformance::ListSizeConstraint;
 use crate::integer::key_switching_key::KeySwitchingKeyView;
 use crate::integer::server_key::ServerKey;
-use crate::shortint::parameters::compact_public_key_only::CompactCiphertextListCastingMode;
+use crate::shortint::parameters::compact_public_key_only::{
+    CompactCiphertextListCastingMode, CompactCiphertextListUnpackingMode,
+};
 use crate::shortint::parameters::{
     CarryModulus, CiphertextConformanceParams, EncryptionKeyChoice, MessageModulus,
-    ShortintCompactCiphertextListCastingMode,
+    ShortintCompactCiphertextListCastingMode, ShortintCompactCiphertextListUnpackingMode,
 };
 pub use crate::shortint::parameters::{
     DecompositionBaseLog, DecompositionLevelCount, DynamicDistribution, GlweDimension,
@@ -30,10 +32,20 @@ impl<'key> From<IntegerCompactCiphertextListCastingMode<'key>>
     }
 }
 
-#[derive(Clone, Copy)]
-pub enum IntegerCompactCiphertextListUnpackingMode<'key> {
-    UnpackIfNecessary(&'key ServerKey),
-    NoUnpacking,
+pub type IntegerCompactCiphertextListUnpackingMode<'key> =
+    CompactCiphertextListUnpackingMode<&'key ServerKey>;
+
+impl<'key> From<IntegerCompactCiphertextListUnpackingMode<'key>>
+    for ShortintCompactCiphertextListUnpackingMode<'key>
+{
+    fn from(value: IntegerCompactCiphertextListUnpackingMode<'key>) -> Self {
+        match value {
+            IntegerCompactCiphertextListUnpackingMode::UnpackIfNecessary(integer_key) => {
+                Self::UnpackIfNecessary(&integer_key.key)
+            }
+            IntegerCompactCiphertextListUnpackingMode::NoUnpacking => Self::NoUnpacking,
+        }
+    }
 }
 
 pub const ALL_PARAMETER_VEC_INTEGER_16_BITS: [WopbsParameters; 2] = [

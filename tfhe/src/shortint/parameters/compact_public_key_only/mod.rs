@@ -9,6 +9,7 @@ use crate::shortint::parameters::{
     CarryModulus, ClassicPBSParameters, MessageModulus, MultiBitPBSParameters, PBSParameters,
     ShortintParameterSet,
 };
+use crate::shortint::server_key::ServerKey;
 use crate::shortint::KeySwitchingKeyView;
 use crate::Error;
 use serde::{Deserialize, Serialize};
@@ -35,6 +36,15 @@ impl From<PBSOrder> for CompactCiphertextListExpansionKind {
         Self::NoCasting(value)
     }
 }
+
+#[derive(Clone, Copy, Debug)]
+pub enum CompactCiphertextListUnpackingMode<K> {
+    UnpackIfNecessary(K),
+    NoUnpacking,
+}
+
+pub type ShortintCompactCiphertextListUnpackingMode<'key> =
+    CompactCiphertextListUnpackingMode<&'key ServerKey>;
 
 #[derive(Debug, Clone, Copy, PartialEq, serde::Serialize, serde::Deserialize, Versionize)]
 #[versionize(CompactPublicKeyEncryptionParametersVersions)]

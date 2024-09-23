@@ -2,6 +2,7 @@ use crate::core_crypto::algorithms::verify_lwe_compact_ciphertext_list;
 use crate::shortint::ciphertext::CompactCiphertextList;
 use crate::shortint::parameters::{
     CompactPublicKeyEncryptionParameters, MessageModulus, ShortintCompactCiphertextListCastingMode,
+    ShortintCompactCiphertextListUnpackingMode,
 };
 use crate::shortint::{Ciphertext, CompactPublicKey};
 use crate::zk::{CompactPkeCrs, CompactPkeProof, CompactPkePublicParams, ZkVerificationOutCome};
