@@ -2,9 +2,11 @@
 #define CUDA_INTEGER_H
 
 #include "keyswitch.h"
+
 #include "pbs/programmable_bootstrap.cuh"
 #include "programmable_bootstrap.h"
 #include "programmable_bootstrap_multibit.h"
+#include "utils/helper_profile.cuh"
 #include <cassert>
 #include <cmath>
 #include <functional>
@@ -1542,7 +1544,7 @@ template <typename Torus> struct int_mul_memory {
     int msb_vector_block_count = num_radix_blocks * (num_radix_blocks - 1) / 2;
 
     int total_block_count = lsb_vector_block_count + msb_vector_block_count;
-
+    PUSH_RANGE("allocates");
     // allocate memory for intermediate buffers
     vector_result_sb = (Torus *)cuda_malloc_async(
         2 * total_block_count * (polynomial_size * glwe_dimension + 1) *
@@ -1555,23 +1557,27 @@ template <typename Torus> struct int_mul_memory {
     small_lwe_vector = (Torus *)cuda_malloc_async(
         total_block_count * (lwe_dimension + 1) * sizeof(Torus), streams[0],
         gpu_indexes[0]);
-
+    POP_RANGE();
     // create int_radix_lut objects for lsb, msb, message, carry
     // luts_array -> lut = {lsb_acc, msb_acc}
+    PUSH_RANGE("create_luts_array");
     luts_array =
         new int_radix_lut<Torus>(streams, gpu_indexes, gpu_count, params, 2,
                                  total_block_count, allocate_gpu_memory);
     auto lsb_acc = luts_array->get_lut(gpu_indexes[0], 0);
     auto msb_acc = luts_array->get_lut(gpu_indexes[0], 1);
+    POP_RANGE();
 
     // define functions for each accumulator
+    PUSH_RANGE("generate_luts");
     auto lut_f_lsb = [message_modulus](Torus x, Torus y) -> Torus {
       return (x * y) % message_modulus;
     };
     auto lut_f_msb = [message_modulus](Torus x, Torus y) -> Torus {
       return (x * y) / message_modulus;
     };
-
+    POP_RANGE();
+    PUSH_RANGE("generate_accumulators");
     // generate accumulators
     generate_device_accumulator_bivariate<Torus>(
         streams[0], gpu_indexes[0], lsb_acc, glwe_dimension, polynomial_size,
@@ -1579,22 +1585,27 @@ template <typename Torus> struct int_mul_memory {
     generate_device_accumulator_bivariate<Torus>(
         streams[0], gpu_indexes[0], msb_acc, glwe_dimension, polynomial_size,
         message_modulus, carry_modulus, lut_f_msb);
-
+    POP_RANGE();
     // lut_indexes_vec for luts_array should be reinitialized
     // first lsb_vector_block_count value should reference to lsb_acc
     // last msb_vector_block_count values should reference to msb_acc
     // for message and carry default lut_indexes_vec is fine
+    PUSH_RANGE("set_lut_indexes");
     cuda_set_value_async<Torus>(
         streams[0], gpu_indexes[0],
         luts_array->get_lut_indexes(gpu_indexes[0], lsb_vector_block_count), 1,
         msb_vector_block_count);
-
+    POP_RANGE();
+    PUSH_RANGE("broadcast_lut");
     luts_array->broadcast_lut(streams, gpu_indexes, gpu_indexes[0]);
+    POP_RANGE();
     // create memory object for sum ciphertexts
+    PUSH_RANGE("sum_ciphertexts_mem");
     sum_ciphertexts_mem = new int_sum_ciphertexts_vec_memory<Torus>(
         streams, gpu_indexes, gpu_count, params, num_radix_blocks,
         2 * num_radix_blocks, block_mul_res, vector_result_sb,
         small_lwe_vector);
+    POP_RANGE();
   }
 
   void release(cudaStream_t *streams, uint32_t *gpu_indexes,
