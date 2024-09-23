@@ -1,4 +1,5 @@
 #include "bootstrapping_key.cuh"
+#include "utils/helper_profile.cuh"
 
 void cuda_convert_lwe_programmable_bootstrap_key_32(
     void *stream, uint32_t gpu_index, void *dest, void *src,
@@ -15,11 +16,13 @@ void cuda_convert_lwe_programmable_bootstrap_key_64(
     void *stream, uint32_t gpu_index, void *dest, void *src,
     uint32_t input_lwe_dim, uint32_t glwe_dim, uint32_t level_count,
     uint32_t polynomial_size) {
+  PUSH_RANGE("CONVERT_LWE_PROGRAMMABLE_BOOTSTRAP_KEY_64");
   uint32_t total_polynomials =
       input_lwe_dim * (glwe_dim + 1) * (glwe_dim + 1) * level_count;
   cuda_convert_lwe_programmable_bootstrap_key<uint64_t, int64_t>(
       static_cast<cudaStream_t>(stream), gpu_index, (double2 *)dest,
       (int64_t *)src, polynomial_size, total_polynomials);
+  POP_RANGE();
 }
 
 void cuda_convert_lwe_multi_bit_programmable_bootstrap_key_64(

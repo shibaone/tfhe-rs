@@ -1,4 +1,5 @@
 #include "device.h"
+#include "utils/helper_profile.cuh"
 #include <cstdint>
 #include <cuda_runtime.h>
 
@@ -99,8 +100,10 @@ bool cuda_check_support_thread_block_clusters() {
 /// Copy memory to the GPU asynchronously
 void cuda_memcpy_async_to_gpu(void *dest, void *src, uint64_t size,
                               cudaStream_t stream, uint32_t gpu_index) {
+  
   if (size == 0)
     return;
+  PUSH_RANGE("cuda_memcpy_async_to_gpu");
   cudaPointerAttributes attr;
   check_cuda_error(cudaPointerGetAttributes(&attr, dest));
   if (attr.device != gpu_index && attr.type != cudaMemoryTypeDevice) {
@@ -110,6 +113,7 @@ void cuda_memcpy_async_to_gpu(void *dest, void *src, uint64_t size,
   check_cuda_error(cudaSetDevice(gpu_index));
   check_cuda_error(
       cudaMemcpyAsync(dest, src, size, cudaMemcpyHostToDevice, stream));
+  POP_RANGE();
 }
 
 /// Copy memory within a GPU asynchronously
