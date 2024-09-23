@@ -319,3 +319,37 @@ impl ParameterSetConformant for ServerKey {
         key.is_conformant(parameter_set)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::high_level_api::keys::inner::IntegerServerKeyConformanceParams;
+    use crate::prelude::ParameterSetConformant;
+    use crate::shortint::parameters::list_compression::COMP_PARAM_MESSAGE_2_CARRY_2_KS_PBS_TUNIFORM_2M64;
+    use crate::shortint::parameters::PARAM_MESSAGE_2_CARRY_2_KS_PBS_TUNIFORM_2M64;
+    use crate::shortint::PBSParameters;
+
+    #[test]
+    fn conformance_hl_key() {
+        let config = crate::ConfigBuilder::with_custom_parameters(
+            PARAM_MESSAGE_2_CARRY_2_KS_PBS_TUNIFORM_2M64,
+        )
+        .enable_compression(COMP_PARAM_MESSAGE_2_CARRY_2_KS_PBS_TUNIFORM_2M64)
+        .build();
+
+        let ck = crate::ClientKey::generate(config);
+        let sk = crate::ServerKey::new(&ck);
+
+        let sk_params = PBSParameters::PBS(PARAM_MESSAGE_2_CARRY_2_KS_PBS_TUNIFORM_2M64);
+
+        let compression_param =
+            (sk_params, COMP_PARAM_MESSAGE_2_CARRY_2_KS_PBS_TUNIFORM_2M64).into();
+
+        let conformance_params = IntegerServerKeyConformanceParams {
+            sk: PBSParameters::PBS(PARAM_MESSAGE_2_CARRY_2_KS_PBS_TUNIFORM_2M64),
+            cpk_param: None,
+            compression_param: Some(compression_param),
+        };
+
+        assert!(sk.is_conformant(&conformance_params));
+    }
+}

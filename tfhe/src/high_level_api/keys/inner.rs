@@ -492,8 +492,8 @@ impl ParameterSetConformant for IntegerServerKey {
             _ => false,
         };
 
-        key.is_conformant(&parameter_set.sk)
-            && cpk_key_switching_key_material_is_ok
-            && compression_is_ok
+        dbg!(key.is_conformant(&parameter_set.sk))
+            && dbg!(cpk_key_switching_key_material_is_ok)
+            && dbg!(compression_is_ok)
     }
 }

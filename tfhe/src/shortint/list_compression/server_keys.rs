@@ -6,7 +6,7 @@ use crate::shortint::backward_compatibility::list_compression::{
 };
 use crate::shortint::client_key::ClientKey;
 use crate::shortint::engine::ShortintEngine;
-use crate::shortint::parameters::PolynomialSize;
+use crate::shortint::parameters::{CompressionParameters, PolynomialSize};
 use crate::shortint::server_key::{PBSConformanceParameters, ShortintBootstrappingKey};
 use crate::shortint::{ClassicPBSParameters, EncryptionKeyChoice, PBSParameters};
 use serde::{Deserialize, Serialize};
@@ -122,6 +122,25 @@ pub struct CompressionParameters2 {
     pub standard_polynomial_size: PolynomialSize,
     pub standard_glwe_dimension: GlweDimension,
     pub cipherext_modulus: CiphertextModulus<u64>,
+}
+
+impl From<(PBSParameters, CompressionParameters)> for CompressionParameters2 {
+    fn from((pbs_params, compression_params): (PBSParameters, CompressionParameters)) -> Self {
+        Self {
+            br_level: compression_params.br_level,
+            br_base_log: compression_params.br_base_log,
+            packing_ks_level: compression_params.packing_ks_level,
+            packing_ks_base_log: compression_params.packing_ks_base_log,
+            packing_ks_polynomial_size: compression_params.packing_ks_polynomial_size,
+            packing_ks_glwe_dimension: compression_params.packing_ks_glwe_dimension,
+            lwe_per_glwe: compression_params.lwe_per_glwe,
+            storage_log_modulus: compression_params.storage_log_modulus,
+            packing_ks_key_noise_distribution: compression_params.packing_ks_key_noise_distribution,
+            standard_polynomial_size: pbs_params.polynomial_size(),
+            standard_glwe_dimension: pbs_params.glwe_dimension(),
+            cipherext_modulus: pbs_params.ciphertext_modulus(),
+        }
+    }
 }
 
 impl ParameterSetConformant for CompressionKey {
