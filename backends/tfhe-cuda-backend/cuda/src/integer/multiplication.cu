@@ -73,6 +73,7 @@ void scratch_cuda_integer_mult_radix_ciphertext_kb_64(
     uint32_t grouping_factor, uint32_t num_radix_blocks, PBS_TYPE pbs_type,
     bool allocate_gpu_memory) {
 
+  PUSH_RANGE("scratch_mul");
   int_radix_params params(pbs_type, glwe_dimension, polynomial_size,
                           polynomial_size * glwe_dimension, lwe_dimension,
                           ks_level, ks_base_log, pbs_level, pbs_base_log,
@@ -95,6 +96,7 @@ void scratch_cuda_integer_mult_radix_ciphertext_kb_64(
     PANIC("Cuda error (integer multiplication): unsupported polynomial size. "
           "Supported N's are powers of two in the interval [256..16384].")
   }
+  POP_RANGE();
 }
 
 /*

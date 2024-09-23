@@ -441,21 +441,21 @@ uint32_t get_lwe_chunk_size(uint32_t gpu_index, uint32_t max_num_pbs,
       get_buffer_size_full_sm_multibit_programmable_bootstrap_keybundle<Torus>(
           polynomial_size);
 
-  int max_blocks_per_sm;
-  int max_shared_memory = cuda_get_max_shared_memory(0);
-  cudaSetDevice(gpu_index);
-  if (max_shared_memory < full_sm_keybundle)
-    cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-        &max_blocks_per_sm,
-        device_multi_bit_programmable_bootstrap_keybundle<Torus, params, NOSM>,
-        polynomial_size / params::opt, full_sm_keybundle);
-  else
-    cudaOccupancyMaxActiveBlocksPerMultiprocessor(
-        &max_blocks_per_sm,
-        device_multi_bit_programmable_bootstrap_keybundle<Torus, params,
-                                                          FULLSM>,
-        polynomial_size / params::opt, 0);
-
+  int max_blocks_per_sm = 8;
+  // int max_shared_memory = cuda_get_max_shared_memory(0);
+  // cudaSetDevice(gpu_index);
+  // if (max_shared_memory < full_sm_keybundle)
+  //   cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+  //       &max_blocks_per_sm,
+  //       device_multi_bit_programmable_bootstrap_keybundle<Torus, params, NOSM>,
+  //       polynomial_size / params::opt, full_sm_keybundle);
+  // else
+  //   cudaOccupancyMaxActiveBlocksPerMultiprocessor(
+  //       &max_blocks_per_sm,
+  //       device_multi_bit_programmable_bootstrap_keybundle<Torus, params,
+  //                                                         FULLSM>,
+  //       polynomial_size / params::opt, 0);
+  
   int num_sms = 0;
   check_cuda_error(cudaDeviceGetAttribute(
       &num_sms, cudaDevAttrMultiProcessorCount, gpu_index));
