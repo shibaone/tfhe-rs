@@ -463,7 +463,7 @@ __host__ bool supports_thread_block_clusters_on_multibit_programmable_bootstrap(
         get_buffer_size_sm_dsm_plus_tbc_multibit_programmable_bootstrap<Torus>(
             polynomial_size);
 
-  int cluster_size;
+  int cluster_size = 8;
 
   dim3 grid_accumulate(level_count, glwe_dimension + 1, num_samples);
   dim3 thds(polynomial_size / params::opt, 1, 1);
@@ -482,39 +482,39 @@ __host__ bool supports_thread_block_clusters_on_multibit_programmable_bootstrap(
    * (glwe_dimension+1) is usually smaller than 8 at this moment, we will
    * disable cudaFuncAttributeNonPortableClusterSizeAllowed */
   int max_shared_memory = cuda_get_max_shared_memory(0);
-  if (max_shared_memory <
-      partial_sm_tbc_accumulate + minimum_sm_tbc_accumulate) {
-    check_cuda_error(cudaFuncSetAttribute(
-        device_multi_bit_programmable_bootstrap_tbc_accumulate<Torus, params,
-                                                               NOSM>,
-        cudaFuncAttributeNonPortableClusterSizeAllowed, false));
-    check_cuda_error(cudaOccupancyMaxPotentialClusterSize(
-        &cluster_size,
-        device_multi_bit_programmable_bootstrap_tbc_accumulate<Torus, params,
-                                                               NOSM>,
-        &config));
-  } else if (max_shared_memory <
-             full_sm_tbc_accumulate + minimum_sm_tbc_accumulate) {
-    check_cuda_error(cudaFuncSetAttribute(
-        device_multi_bit_programmable_bootstrap_tbc_accumulate<Torus, params,
-                                                               PARTIALSM>,
-        cudaFuncAttributeNonPortableClusterSizeAllowed, false));
-    check_cuda_error(cudaOccupancyMaxPotentialClusterSize(
-        &cluster_size,
-        device_multi_bit_programmable_bootstrap_tbc_accumulate<Torus, params,
-                                                               PARTIALSM>,
-        &config));
-  } else {
-    check_cuda_error(cudaFuncSetAttribute(
-        device_multi_bit_programmable_bootstrap_tbc_accumulate<Torus, params,
-                                                               FULLSM>,
-        cudaFuncAttributeNonPortableClusterSizeAllowed, false));
-    check_cuda_error(cudaOccupancyMaxPotentialClusterSize(
-        &cluster_size,
-        device_multi_bit_programmable_bootstrap_tbc_accumulate<Torus, params,
-                                                               FULLSM>,
-        &config));
-  }
+  // if (max_shared_memory <
+  //     partial_sm_tbc_accumulate + minimum_sm_tbc_accumulate) {
+  //   check_cuda_error(cudaFuncSetAttribute(
+  //       device_multi_bit_programmable_bootstrap_tbc_accumulate<Torus, params,
+  //                                                              NOSM>,
+  //       cudaFuncAttributeNonPortableClusterSizeAllowed, false));
+  //   check_cuda_error(cudaOccupancyMaxPotentialClusterSize(
+  //       &cluster_size,
+  //       device_multi_bit_programmable_bootstrap_tbc_accumulate<Torus, params,
+  //                                                              NOSM>,
+  //       &config));
+  // } else if (max_shared_memory <
+  //            full_sm_tbc_accumulate + minimum_sm_tbc_accumulate) {
+  //   check_cuda_error(cudaFuncSetAttribute(
+  //       device_multi_bit_programmable_bootstrap_tbc_accumulate<Torus, params,
+  //                                                              PARTIALSM>,
+  //       cudaFuncAttributeNonPortableClusterSizeAllowed, false));
+  //   check_cuda_error(cudaOccupancyMaxPotentialClusterSize(
+  //       &cluster_size,
+  //       device_multi_bit_programmable_bootstrap_tbc_accumulate<Torus, params,
+  //                                                              PARTIALSM>,
+  //       &config));
+  // } else {
+  //   check_cuda_error(cudaFuncSetAttribute(
+  //       device_multi_bit_programmable_bootstrap_tbc_accumulate<Torus, params,
+  //                                                              FULLSM>,
+  //       cudaFuncAttributeNonPortableClusterSizeAllowed, false));
+  //   check_cuda_error(cudaOccupancyMaxPotentialClusterSize(
+  //       &cluster_size,
+  //       device_multi_bit_programmable_bootstrap_tbc_accumulate<Torus, params,
+  //                                                              FULLSM>,
+  //       &config));
+  // }
 
   return cluster_size >= level_count * (glwe_dimension + 1);
 }
