@@ -96,7 +96,6 @@ bool cuda_check_support_thread_block_clusters() {
   return false;
 #endif
 }
-__global__ void dummy_initialization_kernel() {}
 
 /// Copy memory to the GPU asynchronously
 void cuda_memcpy_async_to_gpu(void *dest, void *src, uint64_t size,
@@ -114,10 +113,6 @@ void cuda_memcpy_async_to_gpu(void *dest, void *src, uint64_t size,
   check_cuda_error(cudaSetDevice(gpu_index));
   check_cuda_error(
       cudaMemcpyAsync(dest, src, size, cudaMemcpyHostToDevice, stream));
-  POP_RANGE();
-  //Dummy kernel launch to warm up the GPU
-  PUSH_RANGE("dummy_initialization_kernel");
-  dummy_initialization_kernel<<<1, 1, 0 , stream>>>();
   POP_RANGE();
 }
 
